@@ -1,0 +1,88 @@
+{
+    "db_shop": {
+        "clients": {
+            "count": 4,
+            "object": {
+                "_id": {
+                    "types_count": {
+                        "oid": 4
+                    },
+                    "count": 4,
+                    "type": "oid",
+                    "prop_in_object": 1.0
+                },
+                "name": {
+                    "types_count": {
+                        "string": 4
+                    },
+                    "count": 4,
+                    "type": "string",
+                    "prop_in_object": 1.0
+                },
+                "bio": {
+                    "types_count": {
+                        "string": 2
+                    },
+                    "count": 2,
+                    "type": "string",
+                    "prop_in_object": 0.5
+                },
+                "pets": {
+                    "types_count": {
+                        "ARRAY": 1,
+                        "string": 1
+                    },
+                    "count": 2,
+                    "array_types_count": {
+                        "string": 2
+                    },
+                    "type": "ARRAY",
+                    "array_type": "string",
+                    "prop_in_object": 0.5
+                },
+                "someWeirdLegacyKey": {
+                    "types_count": {
+                        "string": 1
+                    },
+                    "count": 1,
+                    "type": "string",
+                    "prop_in_object": 0.25
+                },
+                "birthday": {
+                    "types_count": {
+                        "string": 2
+                    },
+                    "count": 2,
+                    "type": "string",
+                    "prop_in_object": 0.5
+                },
+                "location": {
+                    "types_count": {
+                        "OBJECT": 2
+                    },
+                    "count": 2,
+                    "object": {
+                        "country": {
+                            "types_count": {
+                                "string": 2
+                            },
+                            "count": 2,
+                            "type": "string",
+                            "prop_in_object": 1.0
+                        },
+                        "city": {
+                            "types_count": {
+                                "string": 2
+                            },
+                            "count": 2,
+                            "type": "string",
+                            "prop_in_object": 1.0
+                        }
+                    },
+                    "type": "OBJECT",
+                    "prop_in_object": 0.5
+                }
+            }
+        }
+    }
+}
