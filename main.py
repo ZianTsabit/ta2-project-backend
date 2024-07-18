@@ -1,21 +1,24 @@
 from flask_cors import CORS
 from pymongo import MongoClient
-from flask import Flask, request, jsonify
-import psycopg2
 from psycopg2 import OperationalError
+from flask import Flask, request, jsonify
+from pymongo.errors import ServerSelectionTimeoutError
+
+import psycopg2
 
 app = Flask(__name__)
 CORS(app)
 
 def mongo_test_connection(uri, database):
     try:
-        client = MongoClient(uri)
+        client = MongoClient(uri, serverSelectionTimeoutMS=2000)
         db = client[database]
-        # The ping command is used to test the connection to the server
         db.command("ping")
-        return {"success": True, "message": "MongoDB connection successful"}
+        return {"success": True, "message": "connection success"}
+    except ServerSelectionTimeoutError:
+        return {"success": False, "message": "connection failed"}
     except Exception as e:
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "connection failed"}
 
 def postgre_test_connection(host, port, database, user, password):
     try:
@@ -30,9 +33,9 @@ def postgre_test_connection(host, port, database, user, password):
         cursor.execute("SELECT 1")
         cursor.close()
         connection.close()
-        return {"success": True, "message": "PostgreSQL connection successful"}
+        return {"success": True, "message": "connection success"}
     except OperationalError as e:
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "connection failed"}
 
 @app.route('/mongo-test-connection', methods=['POST'])
 def mongo_test_connection_route():
