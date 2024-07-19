@@ -11,14 +11,14 @@ CORS(app)
 
 def mongo_test_connection(host, port, database, user, password):
     try:
-        client = MongoClient(host=host, port=port, username=user, password=password, serverSelectionTimeoutMS=2000)
+        client = MongoClient(host=host, port=int(port), username=user, password=password, serverSelectionTimeoutMS=5000)
         db = client[database]
         db.command("ping")
         return {"success": True, "message": "connection success"}
     except ServerSelectionTimeoutError:
         return {"success": False, "message": "connection failed"}
     except Exception as e:
-        return {"success": False, "message": "connection failed"}
+        return {"success": False, "message": str(e)}
 
 def postgre_test_connection(host, port, database, user, password):
     try:
@@ -64,4 +64,4 @@ def postgre_test_connection_route():
 # TODO : ETL Job Start from the table that has no reference other table 
 
 if __name__ == '__main__':
-    app.run(port=9000)
+    app.run(port=8000)
