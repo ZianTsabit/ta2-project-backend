@@ -69,3 +69,5 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
                                 break
                     if found:
                         break
+    
+    client.close()
