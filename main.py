@@ -56,5 +56,9 @@ def postgre_test_connection_route():
     result = postgre_test_connection(host, port, database, user, password)
     return jsonify(result)
 
+# TODO : Schema Generation From MongoDB to PostreSQL
+# TODO : Instantiate the Schema in PostgreSQL Destination
+# TODO : ETL Job Start from the table that has no reference other table 
+
 if __name__ == '__main__':
     app.run(port=9000)
