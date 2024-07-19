@@ -69,5 +69,3 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
                                 break
                     if found:
                         break
-
-find_foreign_keys(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ", final_schema=basic_schema)
