@@ -32,28 +32,9 @@ def generate_basic_schema(host: str, port: int, username: str, password: str, db
         
         final_schema[coll] = result
 
-    # with open(f"./basic_schema/final_schema.json", "w") as file:
-    #         json.dump(final_schema, file, indent=4)
-
     client.close()
 
     return final_schema
-
-# def get_oid_in_src_coll(host: str, port: int, username: str, password: str, db_name: str, src_coll_name:str, frg_key_candidate: str):
-
-#     client = MongoClient(host=host, port=port, username=username, password=password)
-
-#     db = client[db_name]
-
-#     collection = db[src_coll_name]
-#     document = collection.find_one({}, {frg_key_candidate: 1})
-
-#     client.close()
-
-#     if document:
-#         return document[frg_key_candidate]
-#     else:
-#         return None
 
 def check_oid_in_trgt_coll(host: str, port: int, username: str, password: str, db_name: str, trgt_coll_name:str, oid):
 
@@ -88,20 +69,5 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
                                 break
                     if found:
                         break
-
-basic_schema = {
-    "students": {
-        "_id": "oid",
-        "name": "string",
-        "address": "string"
-    },
-    "courses": {
-        "_id": "oid",
-        "student_id": "oid",
-        "label": "string",
-        "nbr_hours": "integer",
-        "level": "string"
-    }
-}
 
 find_foreign_keys(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ", final_schema=basic_schema)
