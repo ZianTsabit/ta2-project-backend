@@ -56,7 +56,6 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
     for collection_name, attributes in final_schema.items():
         for attribute, attribute_type in attributes.items():
             if attribute_type == "oid" and attribute != "_id":
-                print(attribute)
                 coll = db[collection_name]
                 oids = coll.distinct(attribute)
                 for oid in oids:
@@ -64,7 +63,8 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
                     for trgt_coll_name in final_schema:
                         if trgt_coll_name != collection_name:
                             if check_oid_in_trgt_coll(host=host, port=port, username=username, password=password, db_name=db_name, trgt_coll_name=trgt_coll_name, oid=oid):
-                                print(f"Foreign key: {collection_name}.{attribute} -> {trgt_coll_name}._id")
+                                # print(f"Foreign key: {collection_name}.{attribute} -> {trgt_coll_name}._id")
+                                # TODO : modify the basic schema
                                 found = True
                                 break
                     if found:
