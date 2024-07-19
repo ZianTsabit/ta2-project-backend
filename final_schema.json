@@ -2,13 +2,17 @@
     "students": {
         "_id": "oid",
         "name": "string",
-        "address": "string"
+        "address": "string",
+        "foreign_keys": {}
     },
     "courses": {
         "_id": "oid",
         "student_id": "oid",
         "label": "string",
         "nbr_hours": "integer",
-        "level": "string"
+        "level": "string",
+        "foreign_keys": {
+            "student_id": "students"
+        }
     }
 }

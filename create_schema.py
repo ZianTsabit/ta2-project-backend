@@ -46,26 +46,65 @@ def check_oid_in_trgt_coll(host: str, port: int, username: str, password: str, d
 
     return foreign_key
 
-def find_foreign_keys(host: str, port: int, username: str, password: str, db_name: str, final_schema: dict):
+def find_foreign_keys(host: str, port: int, username: str, password: str, db_name: str, basic_schema: dict):
 
     client = MongoClient(host=host, port=port, username=username, password=password)
     db = client[db_name]
-
-    for collection_name, attributes in final_schema.items():
+    
+    final_schema = {}
+    
+    for collection_name, attributes in basic_schema.items():
+        if 'foreign_keys' not in attributes:
+            attributes['foreign_keys'] = {}
+        
         for attribute, attribute_type in attributes.items():
             if attribute_type == "oid" and attribute != "_id":
                 coll = db[collection_name]
                 oids = coll.distinct(attribute)
                 for oid in oids:
                     found = False
-                    for trgt_coll_name in final_schema:
+                    for trgt_coll_name in basic_schema:
                         if trgt_coll_name != collection_name:
                             if check_oid_in_trgt_coll(host=host, port=port, username=username, password=password, db_name=db_name, trgt_coll_name=trgt_coll_name, oid=oid):
-                                # print(f"Foreign key: {collection_name}.{attribute} -> {trgt_coll_name}._id")
-                                # TODO : modify the basic schema
+
+                                if collection_name not in final_schema:
+                                    final_schema[collection_name] = {'foreign_keys': {}}
+                                
+                                final_schema[collection_name]['foreign_keys'][attribute] = trgt_coll_name
+
                                 found = True
                                 break
                     if found:
                         break
     
+    print(final_schema)
+    
+    for collection_name, update_info in final_schema.items():
+        if collection_name in basic_schema:
+            basic_schema[collection_name].update(update_info)
+        else:
+            basic_schema[collection_name] = update_info
+
     client.close()
+
+    return basic_schema
+
+basic_schema = {
+    "students": {
+        "_id": "oid",
+        "name": "string",
+        "address": "string"
+    },
+    "courses": {
+        "_id": "oid",
+        "student_id": "oid",
+        "label": "string",
+        "nbr_hours": "integer",
+        "level": "string"
+    }
+}
+
+final_schema = find_foreign_keys(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ", basic_schema=basic_schema)
+
+with open('final_schema.json', 'w') as file:
+    json.dump(final_schema, file, indent=4)
