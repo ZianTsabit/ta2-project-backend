@@ -7,18 +7,27 @@ from pymongo_schema.export import transform_data_to_file
 from pymongo_schema.filter import filter_mongo_schema_namespaces
 from pymongo_schema.tosql import mongo_schema_to_mapping
 
+def generate_schema(host: str, port: int, username: str, password: str, db_name: str):
 
-client = MongoClient(host="localhost", port=27017, username="root", password="rootadmin1234")
+    client = MongoClient(host=host, port=port, username=username, password=password)
 
-schema = extract_pymongo_client_schema(client, "db_univ", "students")
+    db = client[db_name]
 
-courses_data = schema["db_univ"]["students"]
+    collections = db.list_collection_names()
 
-object_data = courses_data["object"]
+    for coll in collections:
+        
+        schema = extract_pymongo_client_schema(client, db_name, coll)
 
-result = {}
-for key, value in object_data.items():
-    result[key] = value["type"]
+        courses_data = schema[db_name][coll]
 
-with open("res_students.json", "w") as file:
-    json.dump(result, file, indent=4)
+        object_data = courses_data["object"]
+
+        result = {}
+        for key, value in object_data.items():
+            result[key] = value["type"]
+
+        with open(f"./basic_schema/res_{coll}.json", "w") as file:
+            json.dump(result, file, indent=4)
+
+generate_schema(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ")
