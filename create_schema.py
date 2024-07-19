@@ -77,8 +77,6 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
                     if found:
                         break
     
-    print(final_schema)
-    
     for collection_name, update_info in final_schema.items():
         if collection_name in basic_schema:
             basic_schema[collection_name].update(update_info)
