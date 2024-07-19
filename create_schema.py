@@ -2,11 +2,11 @@ import json
 
 from bson import ObjectId
 from pymongo import MongoClient
-from pymongo_schema.extract import extract_pymongo_client_schema
 from pymongo_schema.compare import compare_schemas_bases
 from pymongo_schema.export import transform_data_to_file
-from pymongo_schema.filter import filter_mongo_schema_namespaces
 from pymongo_schema.tosql import mongo_schema_to_mapping
+from pymongo_schema.extract import extract_pymongo_client_schema
+from pymongo_schema.filter import filter_mongo_schema_namespaces
 
 def generate_basic_schema(host: str, port: int, username: str, password: str, db_name: str):
 
