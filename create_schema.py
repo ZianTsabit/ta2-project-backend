@@ -88,23 +88,3 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
     client.close()
 
     return basic_schema
-
-basic_schema = {
-    "students": {
-        "_id": "oid",
-        "name": "string",
-        "address": "string"
-    },
-    "courses": {
-        "_id": "oid",
-        "student_id": "oid",
-        "label": "string",
-        "nbr_hours": "integer",
-        "level": "string"
-    }
-}
-
-final_schema = find_foreign_keys(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ", basic_schema=basic_schema)
-
-with open('final_schema.json', 'w') as file:
-    json.dump(final_schema, file, indent=4)
