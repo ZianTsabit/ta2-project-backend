@@ -9,9 +9,9 @@ import psycopg2
 app = Flask(__name__)
 CORS(app)
 
-def mongo_test_connection(uri, database):
+def mongo_test_connection(host, port, database, user, password):
     try:
-        client = MongoClient(uri, serverSelectionTimeoutMS=2000)
+        client = MongoClient(host=host, port=port, username=user, password=password, serverSelectionTimeoutMS=2000)
         db = client[database]
         db.command("ping")
         return {"success": True, "message": "connection success"}
@@ -40,9 +40,12 @@ def postgre_test_connection(host, port, database, user, password):
 @app.route('/mongo-test-connection', methods=['POST'])
 def mongo_test_connection_route():
     data = request.json
-    uri = data.get('uri')
+    host = data.get('host')
+    port = data.get('port')
     database = data.get('database')
-    result = mongo_test_connection(uri, database)
+    user = data.get('user')
+    password = data.get('password')
+    result = mongo_test_connection(host=host, port=port, database=database, user=user, password=password)
     return jsonify(result)
 
 @app.route('/postgre-test-connection', methods=['POST'])
