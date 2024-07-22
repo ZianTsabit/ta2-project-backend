@@ -41,11 +41,6 @@ def generate_basic_schema(host: str, port: int, username: str, password: str, db
     client.close()
     return final_schema
 
-# final_schema = generate_basic_schema(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_school_2")
-
-# with open("./basic_schema_2/final_schema_dbschool2.json", 'w') as file:
-#     json.dump(final_schema, file, indent=4)
-
 def check_oid_in_trgt_coll(host: str, port: int, username: str, password: str, db_name: str, trgt_coll_name:str, oid):
 
     client = MongoClient(host=host, port=port, username=username, password=password)
