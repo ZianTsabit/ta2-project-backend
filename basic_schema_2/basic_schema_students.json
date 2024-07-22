@@ -1,0 +1,8 @@
+{
+    "students": {
+        "_id": "oid",
+        "name": "string",
+        "address": "string",
+        "courses": "OBJECT"
+    }
+}

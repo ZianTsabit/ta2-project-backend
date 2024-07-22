@@ -1,0 +1,12 @@
+{
+    "courses": {
+        "label": "string",
+        "nbr_hours": "integer",
+        "level": "string"
+    },
+    "students": {
+        "_id": "oid",
+        "name": "string",
+        "address": "string"
+    }
+}

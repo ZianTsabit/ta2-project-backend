@@ -1,0 +1,31 @@
+{
+    "db_school": {
+        "students": {
+            "pk": "_id",
+            "_id": {
+                "dest": "_id",
+                "type": "TEXT"
+            },
+            "name": {
+                "dest": "name",
+                "type": "TEXT"
+            },
+            "address": {
+                "dest": "address",
+                "type": "TEXT"
+            },
+            "courses.label": {
+                "dest": "courses__label",
+                "type": "TEXT"
+            },
+            "courses.nbr_hours": {
+                "dest": "courses__nbr_hours",
+                "type": "INT"
+            },
+            "courses.level": {
+                "dest": "courses__level",
+                "type": "TEXT"
+            }
+        }
+    }
+}

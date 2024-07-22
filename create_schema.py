@@ -2,36 +2,40 @@ import json
 
 from pymongo import MongoClient
 from pymongo_schema.compare import compare_schemas_bases
+from pymongo_schema.tosql import mongo_schema_to_mapping
 from pymongo_schema.export import transform_data_to_file
 from pymongo_schema.extract import extract_pymongo_client_schema
 from pymongo_schema.filter import filter_mongo_schema_namespaces
 
+def process_object(object_data, parent_key="", result=None, final_schema=None):
+    if result is None:
+        result = {}
+    if final_schema is None:
+        final_schema = {}
+
+    for key, value in object_data.items():
+        data_type = value["type"]
+        if data_type == "OBJECT":
+            nested_result = process_object(value["object"], key, {}, final_schema)
+            final_schema[key] = nested_result
+        else:
+            result[key] = data_type
+    return result
+
 def generate_basic_schema(host: str, port: int, username: str, password: str, db_name: str):
-
     client = MongoClient(host=host, port=port, username=username, password=password)
-
     db = client[db_name]
-
     collections = db.list_collection_names()
-
     final_schema = {}
 
     for coll in collections:
-
         schema = extract_pymongo_client_schema(client, db_name, coll)
-
         courses_data = schema[db_name][coll]
-
         object_data = courses_data["object"]
-
-        result = {}
-        for key, value in object_data.items():
-            result[key] = value["type"]
-        
-        final_schema[coll] = result
+        processed_schema = process_object(object_data, coll, final_schema=final_schema)
+        final_schema[coll] = processed_schema
 
     client.close()
-
     return final_schema
 
 def check_oid_in_trgt_coll(host: str, port: int, username: str, password: str, db_name: str, trgt_coll_name:str, oid):

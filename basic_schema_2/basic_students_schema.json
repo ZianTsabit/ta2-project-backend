@@ -1,0 +1,67 @@
+{
+    "db_school": {
+        "students": {
+            "count": 10,
+            "object": {
+                "_id": {
+                    "types_count": {
+                        "oid": 10
+                    },
+                    "count": 10,
+                    "type": "oid",
+                    "prop_in_object": 1.0
+                },
+                "name": {
+                    "types_count": {
+                        "string": 10
+                    },
+                    "count": 10,
+                    "type": "string",
+                    "prop_in_object": 1.0
+                },
+                "address": {
+                    "types_count": {
+                        "string": 10
+                    },
+                    "count": 10,
+                    "type": "string",
+                    "prop_in_object": 1.0
+                },
+                "courses": {
+                    "types_count": {
+                        "OBJECT": 10
+                    },
+                    "count": 10,
+                    "object": {
+                        "label": {
+                            "types_count": {
+                                "string": 10
+                            },
+                            "count": 10,
+                            "type": "string",
+                            "prop_in_object": 1.0
+                        },
+                        "nbr_hours": {
+                            "types_count": {
+                                "integer": 10
+                            },
+                            "count": 10,
+                            "type": "integer",
+                            "prop_in_object": 1.0
+                        },
+                        "level": {
+                            "types_count": {
+                                "string": 10
+                            },
+                            "count": 10,
+                            "type": "string",
+                            "prop_in_object": 1.0
+                        }
+                    },
+                    "type": "OBJECT",
+                    "prop_in_object": 1.0
+                }
+            }
+        }
+    }
+}
