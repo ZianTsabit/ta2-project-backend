@@ -94,9 +94,9 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
 
     return basic_schema
 
-client = MongoClient(host="localhost", port=27017, username="root", password="rootadmin1234")
+# client = MongoClient(host="localhost", port=27017, username="root", password="rootadmin1234")
 
-schema = extract_pymongo_client_schema(client, "db_univ_2", "students")
+# schema = extract_pymongo_client_schema(client, "db_univ_2", "students")
 
-with open("./basic_schema/basic_schema_students.json", 'w') as file:
-    json.dump(schema, file, indent=4)
+# with open("./basic_schema/basic_schema_students.json", 'w') as file:
+#     json.dump(schema, file, indent=4)
