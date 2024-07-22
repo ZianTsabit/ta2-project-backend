@@ -2,7 +2,8 @@
     "courses": {
         "label": "string",
         "nbr_hours": "integer",
-        "level": "string"
+        "level": "string",
+        "course_id": "oid"
     },
     "students": {
         "_id": "oid",
