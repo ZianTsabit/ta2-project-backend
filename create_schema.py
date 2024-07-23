@@ -18,11 +18,17 @@ def process_object(object_data, parent_key="", result=None, final_schema=None):
         if data_type == "OBJECT":
             nested_result = process_object(value["object"], key, {}, final_schema)
             final_schema[key] = nested_result
-        if data_type == "ARRAY" and value["array_type"] == "OBJECT":
+        elif data_type == "ARRAY" and value["array_type"] == "OBJECT":
             nested_result = process_object(value["object"], key, {}, final_schema)
             final_schema[key] = nested_result
+        elif data_type == "ARRAY" and value["array_type"] == "oid":
+            print("test")
+            # nested_result = process_object(value["object"], key, {}, final_schema)
+            # final_schema[key] = nested_result
+            # TODO: create a function to handle the n-m relation
         else:
             result[key] = data_type
+    
     return result
 
 def generate_basic_schema(host: str, port: int, username: str, password: str, db_name: str):
@@ -94,9 +100,7 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
 
     return basic_schema
 
-# client = MongoClient(host="localhost", port=27017, username="root", password="rootadmin1234")
+basic_schema = generate_basic_schema(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ_2")
 
-# schema = extract_pymongo_client_schema(client, "db_univ_2", "students")
-
-# with open("./basic_schema/basic_schema_students.json", 'w') as file:
-#     json.dump(schema, file, indent=4)
+with open("./basic_schema/schema_basic_db_univ_2.json", 'w') as file:
+    json.dump(basic_schema, file, indent=4)
