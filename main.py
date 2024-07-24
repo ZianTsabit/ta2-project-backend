@@ -44,8 +44,6 @@ def postgre_test_connection(host, port, database, user, password):
     except OperationalError as e:
         return {"success": False, "message": "connection failed"}
 
-# TODO : Schema Generation From MongoDB to PostreSQL
-# TODO : Instantiate the Schema in PostgreSQL Destination
 # TODO : ETL Job Start from the table that has no reference other table
 
 def generate_schema_from_mongo_to_postgres(
