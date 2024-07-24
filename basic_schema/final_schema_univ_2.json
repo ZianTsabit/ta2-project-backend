@@ -1,17 +1,9 @@
 {
     "courses": {
-        "_id": "oid",
         "label": "string",
         "nbr_hours": "integer",
         "level": "string",
-        "categories": "oid",
-        "foreign_keys": {
-            "categories": "categories._id"
-        }
-    },
-    "categories": {
-        "_id": "oid",
-        "name": "string",
+        "students_id": "oid",
         "foreign_keys": {}
     },
     "students": {
@@ -19,13 +11,5 @@
         "name": "string",
         "address": "string",
         "foreign_keys": {}
-    },
-    "courses_students": {
-        "courses_id": "oid",
-        "students_id": "oid",
-        "foreign_keys": {
-            "courses_id": "courses._id",
-            "students_id": "students._id"
-        }
     }
 }

@@ -3,7 +3,10 @@
         "label": "string",
         "nbr_hours": "integer",
         "level": "string",
-        "foreign_keys": {}
+        "students_id": "oid",
+        "foreign_keys": {
+            "students_id": "students._id"
+        }
     },
     "students": {
         "_id": "oid",

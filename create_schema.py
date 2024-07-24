@@ -16,10 +16,18 @@ def process_object(object_data, parent_key="", result=None, final_schema=None):
         data_type = value["type"]
         if data_type == "OBJECT":
             nested_result = process_object(value["object"], key, {}, final_schema)
+            if parent_key:
+                nested_result[f"{parent_key}_id"] = "oid"
             final_schema[key] = nested_result
+            final_schema[key]["foreign_keys"] = {}
+            final_schema[key]["foreign_keys"][f"{parent_key}_id"] = f"{parent_key}._id"
         elif data_type == "ARRAY" and value["array_type"] == "OBJECT":
             nested_result = process_object(value["object"], key, {}, final_schema)
+            if parent_key:
+                nested_result[f"{parent_key}_id"] = "oid"
             final_schema[key] = nested_result
+            final_schema[key]["foreign_keys"] = {}
+            final_schema[key]["foreign_keys"][f"{parent_key}_id"] = f"{parent_key}._id"
         elif data_type == "ARRAY" and value["array_type"] == "oid":
             result[f"{key}"] = value["array_type"]
         else:
@@ -68,6 +76,7 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
             attributes['foreign_keys'] = {}
         
         for attribute, attribute_type in attributes.items():
+        
             if attribute_type == "oid" and attribute != "_id":
                 coll = db[collection_name]
                 oids = coll.distinct(attribute)
@@ -140,11 +149,11 @@ def generate_final_schema(tables: dict):
     
     return cleaned_tables
 
-basic_schema = generate_basic_schema(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ_2")
+basic_schema = generate_basic_schema(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_school")
 
-basic_schema_with_foreign_key = find_foreign_keys(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ_2", basic_schema=basic_schema)
+basic_schema_with_foreign_key = find_foreign_keys(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_school", basic_schema=basic_schema)
 
 final_schema = generate_final_schema(tables=basic_schema_with_foreign_key)
 
-with open('./basic_schema/final_schema_univ_2.json', 'w') as file:
+with open('./basic_schema/final_schema_school.json', 'w') as file:
     json.dump(final_schema, file, indent=4)
