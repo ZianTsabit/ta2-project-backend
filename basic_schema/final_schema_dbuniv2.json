@@ -1,0 +1,23 @@
+{
+    "courses": {
+        "_id": "oid",
+        "label": "string",
+        "nbr_hours": "integer",
+        "level": "string",
+        "student": "oid"
+    },
+    "students": {
+        "_id": "oid",
+        "name": "string",
+        "address": "string",
+        "course": "oid"
+    },
+    "courses_students": {
+        "courses_id": "oid",
+        "students_id": "oid",
+        "foreign_keys": {
+            "courses_id": "courses",
+            "students_id": "students"
+        }
+    }
+}

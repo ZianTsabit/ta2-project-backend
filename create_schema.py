@@ -22,10 +22,7 @@ def process_object(object_data, parent_key="", result=None, final_schema=None):
             nested_result = process_object(value["object"], key, {}, final_schema)
             final_schema[key] = nested_result
         elif data_type == "ARRAY" and value["array_type"] == "oid":
-            print("test")
-            # nested_result = process_object(value["object"], key, {}, final_schema)
-            # final_schema[key] = nested_result
-            # TODO: create a function to handle the n-m relation
+            result[key] = value["array_type"]
         else:
             result[key] = data_type
     
@@ -100,7 +97,64 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
 
     return basic_schema
 
-basic_schema = generate_basic_schema(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ_2")
+basic_schema_using_foreign_keys = {
+    "courses": {
+        "_id": "oid",
+        "label": "string",
+        "nbr_hours": "integer",
+        "level": "string",
+        "student": "oid",
+        "foreign_keys": {
+            "student": "students"
+        }
+    },
+    "students": {
+        "_id": "oid",
+        "name": "string",
+        "address": "string",
+        "course": "oid",
+        "foreign_keys": {
+            "course": "courses"
+        }
+    }
+}
 
-with open("./basic_schema/schema_basic_db_univ_2.json", 'w') as file:
-    json.dump(basic_schema, file, indent=4)
+def generate_final_schema(tables: dict):
+
+    cleaned_tables = {}
+    for table, attributes in tables.items():
+        cleaned_attributes = {k: v for k, v in attributes.items() if k != 'foreign_keys'}
+        cleaned_tables[table] = cleaned_attributes
+    
+    processed_pairs = set()
+    new_tables = {}
+
+    for table1, attributes1 in tables.items():
+        for key1, reference1 in attributes1.get("foreign_keys", {}).items():
+            if reference1 in tables:
+                table2 = reference1
+                attributes2 = tables[table2]
+                
+                pair = tuple(sorted([table1, table2]))
+                if pair not in processed_pairs:
+                    for key2, reference2 in attributes2.get("foreign_keys", {}).items():
+                        if reference2 == table1:
+                            relationship_table_name = f"{pair[0]}_{pair[1]}"
+                            new_tables[relationship_table_name] = {
+                                f"{pair[0]}_id": "oid",
+                                f"{pair[1]}_id": "oid",
+                                "foreign_keys": {
+                                    f"{pair[0]}_id": pair[0],
+                                    f"{pair[1]}_id": pair[1]
+                                }
+                            }
+                            processed_pairs.add(pair)
+
+    cleaned_tables.update(new_tables)
+    
+    return cleaned_tables
+
+final_schema = generate_final_schema(basic_schema_using_foreign_keys)
+
+with open("./basic_schema/final_schema_dbuniv2.json", 'w') as file:
+    json.dump(final_schema, file, indent=4)
