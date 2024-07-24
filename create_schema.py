@@ -149,11 +149,11 @@ def generate_final_schema(tables: dict):
     
     return cleaned_tables
 
-basic_schema = generate_basic_schema(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_school")
+basic_schema = generate_basic_schema(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ_2")
 
-basic_schema_with_foreign_key = find_foreign_keys(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_school", basic_schema=basic_schema)
+basic_schema_with_foreign_key = find_foreign_keys(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ_2", basic_schema=basic_schema)
 
 final_schema = generate_final_schema(tables=basic_schema_with_foreign_key)
 
-with open('./basic_schema/final_schema_school.json', 'w') as file:
+with open('./schemas/final_schema_univ_2.json', 'w') as file:
     json.dump(final_schema, file, indent=4)
