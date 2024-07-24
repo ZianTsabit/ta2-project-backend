@@ -1,15 +1,19 @@
+import psycopg2
+
 from flask_cors import CORS
 from pymongo import MongoClient
 from psycopg2 import OperationalError
 from flask import Flask, request, jsonify
 from pymongo.errors import ServerSelectionTimeoutError
 
-import psycopg2
+from generate_schema import *
+from generate_ddl import *
 
 app = Flask(__name__)
 CORS(app)
 
 def mongo_test_connection(host, port, database, user, password):
+    client = None
     try:
         client = MongoClient(host=host, port=int(port), username=user, password=password, serverSelectionTimeoutMS=5000)
         db = client[database]
@@ -19,6 +23,9 @@ def mongo_test_connection(host, port, database, user, password):
         return {"success": False, "message": "connection failed"}
     except Exception as e:
         return {"success": False, "message": str(e)}
+    finally:
+        if client:
+            client.close()
 
 def postgre_test_connection(host, port, database, user, password):
     try:
@@ -35,6 +42,59 @@ def postgre_test_connection(host, port, database, user, password):
         connection.close()
         return {"success": True, "message": "connection success"}
     except OperationalError as e:
+        return {"success": False, "message": "connection failed"}
+
+# TODO : Schema Generation From MongoDB to PostreSQL
+# TODO : Instantiate the Schema in PostgreSQL Destination
+# TODO : ETL Job Start from the table that has no reference other table
+
+def generate_schema_from_mongo_to_postgres(
+        mongoHost, 
+        mongoPort, 
+        mongoDatabase, 
+        mongoUser, 
+        mongoPassword,
+        postgreHost,
+        postgrePort,
+        postgreDatabase,
+        postgreUser,
+        postgrePassword):
+
+    try:
+
+        basic_schema = generate_basic_schema(host=mongoHost, 
+                                             port=int(mongoPort), 
+                                             username=mongoUser, 
+                                             password=mongoPassword, 
+                                             db_name=mongoDatabase)
+
+        basic_schema_with_foreign_key = find_foreign_keys(host=mongoHost, 
+                                                          port=int(mongoPort), 
+                                                          username=mongoUser, 
+                                                          password=mongoPassword, 
+                                                          db_name=mongoDatabase, 
+                                                          basic_schema=basic_schema)
+
+        final_schema = generate_final_schema(tables=basic_schema_with_foreign_key)
+
+        postgreConn = psycopg2.connect(
+            host=postgreHost,
+            port=postgrePort,
+            database=postgreDatabase,
+            user=postgreUser,
+            password=postgrePassword
+        )
+        
+        postgre_ddl = generate_ddl(final_schema)
+
+        cursor = postgreConn.cursor()
+        cursor.execute(postgre_ddl)
+        cursor.close()
+        postgreConn.close()
+        return {"success": True, "message": "connection success"}
+    
+    except OperationalError as e:
+        
         return {"success": False, "message": "connection failed"}
 
 @app.route('/mongo-test-connection', methods=['POST'])
@@ -59,9 +119,33 @@ def postgre_test_connection_route():
     result = postgre_test_connection(host, port, database, user, password)
     return jsonify(result)
 
-# TODO : Schema Generation From MongoDB to PostreSQL
-# TODO : Instantiate the Schema in PostgreSQL Destination
-# TODO : ETL Job Start from the table that has no reference other table 
+@app.route('/generate-schema-from-mongo-to-postgres', methods=['POST'])
+def generate_schema_from_mongo_to_postgres_route():
+    data = request.json
+    mongoHost = data.get('mongo-host')
+    mongoPort = data.get('mongo-port')
+    mongoDatabase = data.get('mongo-database')
+    mongoUser = data.get('mongo-user')
+    mongoPassword = data.get('mongo-password')
+    postgreHost = data.get('postgre-host')
+    postgrePort = data.get('postgre-port')
+    postgreDatabase = data.get('postgre-database')
+    postgreUser = data.get('postgre-user')
+    postgrePassword = data.get('postgre-password')
+
+    result = generate_schema_from_mongo_to_postgres(
+        mongoHost, 
+        mongoPort, 
+        mongoDatabase, 
+        mongoUser, 
+        mongoPassword,
+        postgreHost,
+        postgrePort,
+        postgreDatabase,
+        postgreUser,
+        postgrePassword)
+
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run(port=8000)

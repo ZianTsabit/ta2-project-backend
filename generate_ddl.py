@@ -74,9 +74,3 @@ def read_json_file(file_path: str):
 def write_ddl_to_file(ddl_script, file_path):
     with open(file_path, 'w') as file:
         file.write(ddl_script)
-
-schema = read_json_file('./schemas/final_schema_univ.json')
-
-ddl_script = generate_ddl(schema)
-
-write_ddl_to_file(ddl_script, './ddl/ddl_univ.sql')
