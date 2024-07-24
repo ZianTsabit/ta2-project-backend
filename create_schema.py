@@ -97,28 +97,6 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
 
     return basic_schema
 
-basic_schema_using_foreign_keys = {
-    "courses": {
-        "_id": "oid",
-        "label": "string",
-        "nbr_hours": "integer",
-        "level": "string",
-        "student": "oid",
-        "foreign_keys": {
-            "student": "students"
-        }
-    },
-    "students": {
-        "_id": "oid",
-        "name": "string",
-        "address": "string",
-        "course": "oid",
-        "foreign_keys": {
-            "course": "courses"
-        }
-    }
-}
-
 def generate_final_schema(tables: dict):
 
     cleaned_tables = {}
@@ -163,10 +141,3 @@ def remove_non_id_fields(tables):
         }
         cleaned_tables[table] = cleaned_attributes
     return cleaned_tables
-
-final_schema = generate_final_schema(basic_schema_using_foreign_keys)
-
-super_final_schema = remove_non_id_fields(final_schema)
-
-with open("./basic_schema/final_schema_dbuniv2.json", 'w') as file:
-    json.dump(super_final_schema, file, indent=4)
