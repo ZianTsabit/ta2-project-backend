@@ -5,7 +5,6 @@ from pymongo_schema.compare import compare_schemas_bases
 from pymongo_schema.tosql import mongo_schema_to_mapping
 from pymongo_schema.export import transform_data_to_file
 from pymongo_schema.extract import extract_pymongo_client_schema
-from pymongo_schema.filter import filter_mongo_schema_namespaces
 
 def process_object(object_data, parent_key="", result=None, final_schema=None):
     if result is None:
@@ -147,5 +146,5 @@ basic_schema_with_foreign_key = find_foreign_keys(host="localhost", port=27017, 
 
 final_schema = generate_final_schema(tables=basic_schema_with_foreign_key)
 
-with open('./basic_schema/final_schema.json', 'w') as file:
+with open('./basic_schema/final_schema_univ_2.json', 'w') as file:
     json.dump(final_schema, file, indent=4)
