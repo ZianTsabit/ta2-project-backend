@@ -22,13 +22,14 @@ def process_object(object_data, parent_key="", result=None, final_schema=None):
             nested_result = process_object(value["object"], key, {}, final_schema)
             final_schema[key] = nested_result
         elif data_type == "ARRAY" and value["array_type"] == "oid":
-            result[key] = value["array_type"]
+            result[f"{key}"] = value["array_type"]
         else:
             result[key] = data_type
     
     return result
 
 def generate_basic_schema(host: str, port: int, username: str, password: str, db_name: str):
+
     client = MongoClient(host=host, port=port, username=username, password=password)
     db = client[db_name]
     collections = db.list_collection_names()
@@ -45,7 +46,7 @@ def generate_basic_schema(host: str, port: int, username: str, password: str, db
     return final_schema
 
 def check_oid_in_trgt_coll(host: str, port: int, username: str, password: str, db_name: str, trgt_coll_name:str, oid):
-
+    
     client = MongoClient(host=host, port=port, username=username, password=password)
     db = client[db_name]
     coll = db[trgt_coll_name]
@@ -76,14 +77,15 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
                     for trgt_coll_name in basic_schema:
                         if trgt_coll_name != collection_name:
                             if check_oid_in_trgt_coll(host=host, port=port, username=username, password=password, db_name=db_name, trgt_coll_name=trgt_coll_name, oid=oid):
-
+                                
                                 if collection_name not in final_schema:
                                     final_schema[collection_name] = {'foreign_keys': {}}
                                 
-                                final_schema[collection_name]['foreign_keys'][attribute] = trgt_coll_name
+                                final_schema[collection_name]['foreign_keys'][attribute] = f"{trgt_coll_name}._id"
 
                                 found = True
                                 break
+
                     if found:
                         break
     
@@ -99,40 +101,47 @@ def find_foreign_keys(host: str, port: int, username: str, password: str, db_nam
 
 def generate_final_schema(tables: dict):
 
-    cleaned_tables = {}
-    for table, attributes in tables.items():
-        cleaned_attributes = {k: v for k, v in attributes.items() if k != 'foreign_keys'}
-        cleaned_tables[table] = cleaned_attributes
-    
+    cleaned_tables = {table: dict(attributes) for table, attributes in tables.items()}  # Make a deep copy
     processed_pairs = set()
     new_tables = {}
 
     for table1, attributes1 in tables.items():
         for key1, reference1 in attributes1.get("foreign_keys", {}).items():
-            if reference1 in tables:
-                table2 = reference1
+            ref1 = reference1.split(".")[0]
+            if ref1 in tables:
+                table2 = ref1
                 attributes2 = tables[table2]
                 
                 pair = tuple(sorted([table1, table2]))
                 if pair not in processed_pairs:
                     for key2, reference2 in attributes2.get("foreign_keys", {}).items():
-                        if reference2 == table1:
+                        ref2 = reference2.split(".")[0]
+                        if ref2 == table1:
                             relationship_table_name = f"{pair[0]}_{pair[1]}"
                             new_tables[relationship_table_name] = {
                                 f"{pair[0]}_id": "oid",
                                 f"{pair[1]}_id": "oid",
                                 "foreign_keys": {
-                                    f"{pair[0]}_id": pair[0],
-                                    f"{pair[1]}_id": pair[1]
+                                    f"{pair[0]}_id": f"{pair[0]}._id",
+                                    f"{pair[1]}_id": f"{pair[1]}._id"
                                 }
                             }
                             processed_pairs.add(pair)
 
+    for pair in processed_pairs:
+        table1, table2 = pair
+        if "foreign_keys" in cleaned_tables[table1] and table2 in cleaned_tables[table1]["foreign_keys"]:
+            del cleaned_tables[table1]["foreign_keys"][table2]
+            del cleaned_tables[table1][table2]
+        if "foreign_keys" in cleaned_tables[table2] and table1 in cleaned_tables[table2]["foreign_keys"]:
+            del cleaned_tables[table2]["foreign_keys"][table1]
+            del cleaned_tables[table2][table1]
+    
     cleaned_tables.update(new_tables)
     
     return cleaned_tables
 
-def remove_non_id_fields(tables):
+def remove_non_id_fields(tables: dict):
     cleaned_tables = {}
     for table, attributes in tables.items():
         cleaned_attributes = {
@@ -141,3 +150,14 @@ def remove_non_id_fields(tables):
         }
         cleaned_tables[table] = cleaned_attributes
     return cleaned_tables
+
+basic_schema = generate_basic_schema(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ_2")
+
+basic_schema_with_foreign_key = find_foreign_keys(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ_2", basic_schema=basic_schema)
+
+final_schema = generate_final_schema(tables=basic_schema_with_foreign_key)
+
+# super_final_schema = remove_non_id_fields(final_schema)
+
+with open('./basic_schema/final_schema.json', 'w') as file:
+    json.dump(final_schema, file, indent=4)
