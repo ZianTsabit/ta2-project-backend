@@ -154,7 +154,19 @@ def generate_final_schema(tables: dict):
     
     return cleaned_tables
 
+def remove_non_id_fields(tables):
+    cleaned_tables = {}
+    for table, attributes in tables.items():
+        cleaned_attributes = {
+            k: v for k, v in attributes.items()
+            if not (v == "oid" and 'id' not in k.lower())
+        }
+        cleaned_tables[table] = cleaned_attributes
+    return cleaned_tables
+
 final_schema = generate_final_schema(basic_schema_using_foreign_keys)
 
+super_final_schema = remove_non_id_fields(final_schema)
+
 with open("./basic_schema/final_schema_dbuniv2.json", 'w') as file:
-    json.dump(final_schema, file, indent=4)
+    json.dump(super_final_schema, file, indent=4)
