@@ -141,23 +141,11 @@ def generate_final_schema(tables: dict):
     
     return cleaned_tables
 
-def remove_non_id_fields(tables: dict):
-    cleaned_tables = {}
-    for table, attributes in tables.items():
-        cleaned_attributes = {
-            k: v for k, v in attributes.items()
-            if not (v == "oid" and 'id' not in k.lower())
-        }
-        cleaned_tables[table] = cleaned_attributes
-    return cleaned_tables
-
 basic_schema = generate_basic_schema(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ_2")
 
 basic_schema_with_foreign_key = find_foreign_keys(host="localhost", port=27017, username="root", password="rootadmin1234", db_name="db_univ_2", basic_schema=basic_schema)
 
 final_schema = generate_final_schema(tables=basic_schema_with_foreign_key)
-
-# super_final_schema = remove_non_id_fields(final_schema)
 
 with open('./basic_schema/final_schema.json', 'w') as file:
     json.dump(final_schema, file, indent=4)
