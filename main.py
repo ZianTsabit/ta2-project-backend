@@ -120,16 +120,16 @@ def postgre_test_connection_route():
 @app.route('/generate-schema-from-mongo-to-postgres', methods=['POST'])
 def generate_schema_from_mongo_to_postgres_route():
     data = request.json
-    mongoHost = data.get('mongo-host')
-    mongoPort = data.get('mongo-port')
-    mongoDatabase = data.get('mongo-database')
-    mongoUser = data.get('mongo-user')
-    mongoPassword = data.get('mongo-password')
-    postgreHost = data.get('postgre-host')
-    postgrePort = data.get('postgre-port')
-    postgreDatabase = data.get('postgre-database')
-    postgreUser = data.get('postgre-user')
-    postgrePassword = data.get('postgre-password')
+    mongoHost = data.get('mongo_host')
+    mongoPort = data.get('mongo_port')
+    mongoDatabase = data.get('mongo_database')
+    mongoUser = data.get('mongo_user')
+    mongoPassword = data.get('mongo_password')
+    postgreHost = data.get('postgre_host')
+    postgrePort = data.get('postgre_port')
+    postgreDatabase = data.get('postgre_database')
+    postgreUser = data.get('postgre_user')
+    postgrePassword = data.get('postgre_password')
 
     result = generate_schema_from_mongo_to_postgres(
         mongoHost, 
