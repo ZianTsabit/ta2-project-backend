@@ -85,15 +85,17 @@ def generate_schema_from_mongo_to_postgres(
         
         postgre_ddl = generate_ddl(final_schema)
 
-        cursor = postgreConn.cursor()
-        cursor.execute(postgre_ddl)
-        cursor.close()
-        postgreConn.close()
-        return {"success": True, "message": "connection success"}
+        with postgreConn.cursor() as cursor:
+            cursor.execute(postgre_ddl)
+            postgreConn.commit()
+
+        return {"success": True, "message": "Schema creation successful"}
     
     except OperationalError as e:
-        
-        return {"success": False, "message": "connection failed"}
+        return {"success": False, "message": f"Database operation failed: {e}"}
+    
+    except Exception as e:
+        return {"success": False, "message": f"An error occurred: {e}"}
 
 @app.route('/mongo-test-connection', methods=['POST'])
 def mongo_test_connection_route():
