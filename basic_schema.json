@@ -1,0 +1,81 @@
+{
+    "db_shop": {
+        "employees": {
+            "count": 50,
+            "object": {
+                "_id": {
+                    "types_count": {
+                        "oid": 50
+                    },
+                    "count": 50,
+                    "type": "oid",
+                    "prop_in_object": 1.0
+                },
+                "employee_id": {
+                    "types_count": {
+                        "integer": 50
+                    },
+                    "count": 50,
+                    "type": "integer",
+                    "prop_in_object": 1.0
+                },
+                "last_name": {
+                    "types_count": {
+                        "string": 50
+                    },
+                    "count": 50,
+                    "type": "string",
+                    "prop_in_object": 1.0
+                },
+                "first_name": {
+                    "types_count": {
+                        "string": 50
+                    },
+                    "count": 50,
+                    "type": "string",
+                    "prop_in_object": 1.0
+                },
+                "extension": {
+                    "types_count": {
+                        "string": 50
+                    },
+                    "count": 50,
+                    "type": "string",
+                    "prop_in_object": 1.0
+                },
+                "email": {
+                    "types_count": {
+                        "string": 50
+                    },
+                    "count": 50,
+                    "type": "string",
+                    "prop_in_object": 1.0
+                },
+                "office_id": {
+                    "types_count": {
+                        "string": 50
+                    },
+                    "count": 50,
+                    "type": "string",
+                    "prop_in_object": 1.0
+                },
+                "reports_to": {
+                    "types_count": {
+                        "integer": 41
+                    },
+                    "count": 41,
+                    "type": "integer",
+                    "prop_in_object": 0.82
+                },
+                "job_name": {
+                    "types_count": {
+                        "string": 50
+                    },
+                    "count": 50,
+                    "type": "string",
+                    "prop_in_object": 1.0
+                }
+            }
+        }
+    }
+}

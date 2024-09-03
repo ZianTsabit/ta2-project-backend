@@ -148,3 +148,9 @@ def generate_final_schema(tables: dict):
     cleaned_tables.update(new_tables)
     
     return cleaned_tables
+
+client = MongoClient("mongodb://localhost:27017")
+basic_schema = extract_pymongo_client_schema(client, "db_shop", "employees")
+
+with open('basic_schema.json','w') as json_file:
+    json.dump(basic_schema, json_file, indent=4)
