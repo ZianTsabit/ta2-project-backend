@@ -86,6 +86,12 @@ def candidate_key_by_collection(host: str, port:int, database:str, collection:st
 def primary_key_by_collection(candidate_key: list):
     '''
     Function to get primary key by collection
+    
+    priority:
+    1. candidate key found in other collection
+    2. candidate key have type oid
+    3. candidate key is shortest
+    4. else
     '''
     for key in candidate_key:
 
