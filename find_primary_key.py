@@ -81,21 +81,32 @@ def candidate_key_by_collection(host: str, port:int, database:str, collection:st
             if uniqueness == 1.0:
                 candidate_key.append(', '.join(rem_fields))
 
+    client.close()
+
     return candidate_key
 
-def check_key_in_other_collection():
+def check_key_in_other_collection(host:str, port:int, database:str, collection:str, user:str, password:str, key:str):
     '''
     Check if the instance of a field found in other collection
     '''
-    pass
+    
+    client = MongoClient(host=host, port=port, username=username, password=password)
+    db = client[db_name]
+    coll = db[trgt_coll_name]
 
-def check_key_type():
+    foreign_key = coll.count_documents({'_id': key}) > 0
+
+    client.close()
+
+    return foreign_key
+
+def check_key_type(host:str, port:int, database:str, collection:str, user:str, password:str, key:str):
     '''
     Check data type of a field
     '''
     pass
 
-def check_shortest_candidate_key():
+def check_shortest_candidate_key(candidate_key:list):
     '''
     Get the shortest candidate key
     '''
