@@ -7,14 +7,10 @@ import itertools
 
 from pymongo import MongoClient
 
-# TODO: program to count or determine the value of uniqueness of a field
-# or a combination of a field
-# input: all document in collection
-# output: the uniqueness point (unique value/total data)
-# kalau field tersebut tidak muncul di semua dokumen maka
-# uniquecount akan ada dua, karena null
 def candidate_key_by_collection(host: str, port:int, database:str, collection:str, user:str, password:str):
-    
+    '''
+    Function to get the candidate key by collection
+    '''
     total_documents = 0
     valid_fields = []
     candidate_key = []
