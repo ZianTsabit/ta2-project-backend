@@ -83,10 +83,28 @@ def candidate_key_by_collection(host: str, port:int, database:str, collection:st
 
     return candidate_key
 
+def check_key_in_other_collection():
+    '''
+    Check if the instance of a field found in other collection
+    '''
+    pass
+
+def check_key_type():
+    '''
+    Check data type of a field
+    '''
+    pass
+
+def check_shortest_candidate_key():
+    '''
+    Get the shortest candidate key
+    '''
+    pass
+
 def primary_key_by_collection(candidate_key: list):
     '''
     Function to get primary key by collection
-    
+
     priority:
     1. candidate key found in other collection
     2. candidate key have type oid
@@ -94,11 +112,8 @@ def primary_key_by_collection(candidate_key: list):
     4. else
     '''
     for key in candidate_key:
-
-
-
-    pass
+        print(key)
 
 can_key = candidate_key_by_collection("localhost", 27017,"db_univ", "students", "root", "rootadmin1234")
 
-print(can_key)
+primary_key_by_collection(can_key)
