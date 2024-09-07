@@ -85,16 +85,19 @@ def candidate_key_by_collection(host: str, port:int, database:str, collection:st
 
     return candidate_key
 
-def check_key_in_other_collection(host:str, port:int, database:str, collection:str, user:str, password:str, key:str):
+def check_key_in_other_collection(host:str, port:int, database:str, src_coll:str, trgt_coll:str, user:str, password:str, key:str):
     '''
     Check if the instance of a field found in other collection
+    
+    get one instance of a key
+    check all field on the target coll if that instance found or not
+
     '''
     
-    client = MongoClient(host=host, port=port, username=username, password=password)
-    db = client[db_name]
-    coll = db[trgt_coll_name]
-
-    foreign_key = coll.count_documents({'_id': key}) > 0
+    client = MongoClient(host=host, port=port, username=user, password=password)
+    db = client[database]
+    src_coll = db[src_coll]
+    trgt_coll = db[trgt_coll]
 
     client.close()
 
@@ -104,6 +107,11 @@ def check_key_type(host:str, port:int, database:str, collection:str, user:str, p
     '''
     Check data type of a field
     '''
+    client = MongoClient(host=host, port=port, username=user, password=password)
+    db = client[database]
+
+    client.close()
+
     pass
 
 def check_shortest_candidate_key(candidate_key:list):
@@ -112,7 +120,7 @@ def check_shortest_candidate_key(candidate_key:list):
     '''
     pass
 
-def primary_key_by_collection(candidate_key: list):
+def primary_key_by_collection(host:str, port:int, database:str, collection:str, user:str, password:str, candidate_key: list):
     '''
     Function to get primary key by collection
 
@@ -122,8 +130,16 @@ def primary_key_by_collection(candidate_key: list):
     3. candidate key is shortest
     4. else
     '''
+
+    client = MongoClient(host=host, port=port, username=user, password=password)
+    db = client[database]
+
     for key in candidate_key:
         print(key)
+
+    client.close()
+
+    pass
 
 can_key = candidate_key_by_collection("localhost", 27017,"db_univ", "students", "root", "rootadmin1234")
 
