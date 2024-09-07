@@ -1,7 +1,3 @@
-# algorithm for find a primary key
-# so the algorithm will list all the available field in a collection
-# and then deterimine if a field or a combination of a fields can 
-# uniquely identify the data
 import json
 import itertools
 
@@ -9,7 +5,7 @@ from pymongo import MongoClient
 
 def candidate_key_by_collection(host: str, port:int, database:str, collection:str, user:str, password:str):
     '''
-    Function to get the candidate key by collection
+    Function to get candidate key by collection
     '''
     total_documents = 0
     valid_fields = []
@@ -87,18 +83,16 @@ def candidate_key_by_collection(host: str, port:int, database:str, collection:st
 
     return candidate_key
 
+def primary_key_by_collection(candidate_key: list):
+    '''
+    Function to get primary key by collection
+    '''
+    for key in candidate_key:
+
+
+
+    pass
+
 can_key = candidate_key_by_collection("localhost", 27017,"db_univ", "students", "root", "rootadmin1234")
 
 print(can_key)
-
-# field or combination of a fields that can unqiuely identify the data
-# will be count as a candidate key
-# primary key will be chosen from the candidate key
-# primary key will be the shortest candidate key and also appear on other collection
-
-# TODO: program to find candidate key
-
-# TODO: program to choose the shortest candidate key
-
-# TODO: program to check if the chosen primary key appear in other collection
-
