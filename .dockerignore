@@ -1,0 +1,7 @@
+__pycache__
+ta2-env/
+*.pyc
+*.pyo
+*.pyd
+.vscode
+.env
