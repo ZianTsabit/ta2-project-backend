@@ -1,6 +1,5 @@
 import json
 
-# data type conversion rule
 MONGO_TO_PSQL_TYPE = {
     'boolean': 'BOOLEAN',
     'integer': 'INT',
@@ -13,28 +12,27 @@ MONGO_TO_PSQL_TYPE = {
     'dbref': 'TEXT'
 }
 
+
 def generate_ddl(tables):
     ddl_statements = []
 
     tables_with_fk = {}
     tables_without_fk = {}
 
-    # Separate tables into those with and without foreign keys
     for table_name, attributes in tables.items():
         if "foreign_keys" in attributes and attributes["foreign_keys"]:
             tables_with_fk[table_name] = attributes
         else:
             tables_without_fk[table_name] = attributes
 
-    # Process tables without foreign keys first
     for table_name, attributes in tables_without_fk.items():
         ddl_statements.append(create_table_ddl(table_name, attributes))
 
-    # Process tables with foreign keys
     for table_name, attributes in tables_with_fk.items():
         ddl_statements.append(create_table_ddl(table_name, attributes))
 
     return "\n\n".join(ddl_statements)
+
 
 def create_table_ddl(table_name, attributes):
     columns = []
@@ -42,7 +40,6 @@ def create_table_ddl(table_name, attributes):
     unique_columns = []
     foreign_keys = []
 
-    # Define the columns and identify primary key and unique constraints
     for column, data_type in attributes.items():
         if column == "foreign_keys":
             continue
@@ -53,18 +50,20 @@ def create_table_ddl(table_name, attributes):
             if column == "_id":
                 primary_key = column
                 unique_columns.append(column)
-            elif data_type == 'oid' and column not in attributes.get("foreign_keys", {}):
+            elif (data_type == 'oid' and
+                    column not in attributes.get("foreign_keys", {})):
                 unique_columns.append(column)
         else:
             raise ValueError(f"Unsupported data type: {data_type}")
 
-    # Define the foreign keys
     foreign_keys_attributes = attributes.get("foreign_keys", {})
     for fk_column, ref in foreign_keys_attributes.items():
         ref_table, ref_column = ref.split(".")
-        foreign_keys.append(f"FOREIGN KEY ({fk_column}) REFERENCES {ref_table} ({ref_column})")
+        foreign_keys.append(
+            f'''FOREIGN KEY ({fk_column})
+            REFERENCES {ref_table} ({ref_column})'''
+        )
 
-    # Construct the table definition
     table_definition = f"CREATE TABLE {table_name} (\n"
     table_definition += ",\n".join(columns)
 
@@ -80,13 +79,15 @@ def create_table_ddl(table_name, attributes):
         table_definition += ",\n".join(foreign_keys)
 
     table_definition += "\n);"
-    
+
     return table_definition
+
 
 def read_json_file(file_path: str):
     with open(file_path, 'r') as file:
         data = json.load(file)
     return data
+
 
 def write_ddl_to_file(ddl_script, file_path):
     with open(file_path, 'w') as file:

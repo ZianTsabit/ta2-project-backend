@@ -1,21 +1,29 @@
 import psycopg2
-
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-from pymongo import MongoClient
 from psycopg2 import OperationalError
-from flask import Flask, request, jsonify
+from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
-from generate_schema import *
-from generate_ddl import *
+from .gooseqlify.generate_ddl import generate_ddl
+from .gooseqlify.generate_schema import (find_foreign_keys,
+                                         generate_basic_schema,
+                                         generate_final_schema)
 
 app = Flask(__name__)
 CORS(app)
 
+
 def mongo_test_connection(host, port, database, user, password):
     client = None
     try:
-        client = MongoClient(host=host, port=int(port), username=user, password=password, serverSelectionTimeoutMS=5000)
+        client = MongoClient(
+            host=host,
+            port=int(port),
+            username=user,
+            password=password,
+            serverSelectionTimeoutMS=5000
+        )
         db = client[database]
         db.command("ping")
         return {"success": True, "message": "connection success"}
@@ -26,6 +34,7 @@ def mongo_test_connection(host, port, database, user, password):
     finally:
         if client:
             client.close()
+
 
 def postgre_test_connection(host, port, database, user, password):
     try:
@@ -42,15 +51,14 @@ def postgre_test_connection(host, port, database, user, password):
         connection.close()
         return {"success": True, "message": "connection success"}
     except OperationalError as e:
-        return {"success": False, "message": "connection failed"}
+        return {"success": False, "message": f"connection failed {e}"}
 
-# TODO : ETL Job Start from the table that has no reference other table
 
 def generate_schema_from_mongo_to_postgres(
-        mongoHost, 
-        mongoPort, 
-        mongoDatabase, 
-        mongoUser, 
+        mongoHost,
+        mongoPort,
+        mongoDatabase,
+        mongoUser,
         mongoPassword,
         postgreHost,
         postgrePort,
@@ -60,20 +68,26 @@ def generate_schema_from_mongo_to_postgres(
 
     try:
 
-        basic_schema = generate_basic_schema(host=mongoHost, 
-                                             port=int(mongoPort), 
-                                             username=mongoUser, 
-                                             password=mongoPassword, 
-                                             db_name=mongoDatabase)
+        basic_schema = generate_basic_schema(
+            host=mongoHost,
+            port=int(mongoPort),
+            username=mongoUser,
+            password=mongoPassword,
+            db_name=mongoDatabase
+        )
 
-        basic_schema_with_foreign_key = find_foreign_keys(host=mongoHost, 
-                                                          port=int(mongoPort), 
-                                                          username=mongoUser, 
-                                                          password=mongoPassword, 
-                                                          db_name=mongoDatabase, 
-                                                          basic_schema=basic_schema)
+        basic_schema_with_foreign_key = find_foreign_keys(
+            host=mongoHost,
+            port=int(mongoPort),
+            username=mongoUser,
+            password=mongoPassword,
+            db_name=mongoDatabase,
+            basic_schema=basic_schema
+        )
 
-        final_schema = generate_final_schema(tables=basic_schema_with_foreign_key)
+        final_schema = generate_final_schema(
+            tables=basic_schema_with_foreign_key
+        )
 
         postgreConn = psycopg2.connect(
             host=postgreHost,
@@ -82,7 +96,7 @@ def generate_schema_from_mongo_to_postgres(
             user=postgreUser,
             password=postgrePassword
         )
-        
+
         postgre_ddl = generate_ddl(final_schema)
 
         with postgreConn.cursor() as cursor:
@@ -90,12 +104,13 @@ def generate_schema_from_mongo_to_postgres(
             postgreConn.commit()
 
         return {"success": True, "message": "Schema creation successful"}
-    
+
     except OperationalError as e:
         return {"success": False, "message": f"Database operation failed: {e}"}
-    
+
     except Exception as e:
         return {"success": False, "message": f"An error occurred: {e}"}
+
 
 @app.route('/mongo-test-connection', methods=['POST'])
 def mongo_test_connection_route():
@@ -105,8 +120,15 @@ def mongo_test_connection_route():
     database = data.get('database')
     user = data.get('user')
     password = data.get('password')
-    result = mongo_test_connection(host=host, port=port, database=database, user=user, password=password)
+    result = mongo_test_connection(
+        host=host,
+        port=port,
+        database=database,
+        user=user,
+        password=password
+    )
     return jsonify(result)
+
 
 @app.route('/postgre-test-connection', methods=['POST'])
 def postgre_test_connection_route():
@@ -118,6 +140,7 @@ def postgre_test_connection_route():
     password = data.get('password')
     result = postgre_test_connection(host, port, database, user, password)
     return jsonify(result)
+
 
 @app.route('/generate-schema-from-mongo-to-postgres', methods=['POST'])
 def generate_schema_from_mongo_to_postgres_route():
@@ -134,10 +157,10 @@ def generate_schema_from_mongo_to_postgres_route():
     postgrePassword = data.get('postgre_password')
 
     result = generate_schema_from_mongo_to_postgres(
-        mongoHost, 
-        mongoPort, 
-        mongoDatabase, 
-        mongoUser, 
+        mongoHost,
+        mongoPort,
+        mongoDatabase,
+        mongoUser,
         mongoPassword,
         postgreHost,
         postgrePort,
@@ -146,6 +169,7 @@ def generate_schema_from_mongo_to_postgres_route():
         postgrePassword)
 
     return jsonify(result)
+
 
 if __name__ == '__main__':
     app.run(port=8000)
