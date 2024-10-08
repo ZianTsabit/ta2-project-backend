@@ -1,0 +1,37 @@
+from fastapi import APIRouter, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+
+from models.mongodb import MongoDB
+
+router = APIRouter(
+    prefix="/api/mongodb",
+    tags=["mongodb"]
+)
+
+
+@router.get("/")
+async def root_mongodb():
+
+    return JSONResponse(
+        content={"message": "MongoDB Routers"},
+        status_code=status.HTTP_200_OK
+    )
+
+
+@router.post("/test-connection")
+async def test_connection(mongodb: MongoDB):
+
+    connection_status = mongodb.test_connection()
+
+    if connection_status:
+        return JSONResponse(
+            content={"message": connection_status},
+            status_code=status.HTTP_200_OK
+        )
+
+    else:
+        return JSONResponse(
+            content={"message": connection_status},
+            status_code=status.HTTP_200_OK
+        )
