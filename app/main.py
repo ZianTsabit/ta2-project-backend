@@ -1,9 +1,7 @@
-import psycopg2
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from psycopg2 import OperationalError
-from pymongo import MongoClient
-from pymongo.errors import ServerSelectionTimeoutError
 
 from .gooseqlify.generate_ddl import generate_ddl
 from .gooseqlify.generate_schema import (find_foreign_keys,
@@ -12,46 +10,6 @@ from .gooseqlify.generate_schema import (find_foreign_keys,
 
 app = Flask(__name__)
 CORS(app)
-
-
-def mongo_test_connection(host, port, database, user, password):
-    client = None
-    try:
-        client = MongoClient(
-            host=host,
-            port=int(port),
-            username=user,
-            password=password,
-            serverSelectionTimeoutMS=5000
-        )
-        db = client[database]
-        db.command("ping")
-        return {"success": True, "message": "connection success"}
-    except ServerSelectionTimeoutError:
-        return {"success": False, "message": "connection failed"}
-    except Exception as e:
-        return {"success": False, "message": str(e)}
-    finally:
-        if client:
-            client.close()
-
-
-def postgre_test_connection(host, port, database, user, password):
-    try:
-        connection = psycopg2.connect(
-            host=host,
-            port=port,
-            database=database,
-            user=user,
-            password=password
-        )
-        cursor = connection.cursor()
-        cursor.execute("SELECT 1")
-        cursor.close()
-        connection.close()
-        return {"success": True, "message": "connection success"}
-    except OperationalError as e:
-        return {"success": False, "message": f"connection failed {e}"}
 
 
 def generate_schema_from_mongo_to_postgres(
