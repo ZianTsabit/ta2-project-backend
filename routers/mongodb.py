@@ -26,12 +26,18 @@ async def test_connection(mongodb: MongoDB):
 
     if connection_status:
         return JSONResponse(
-            content={"message": connection_status},
+            content={
+                "status": connection_status,
+                "message": "connection success"
+            },
             status_code=status.HTTP_200_OK
         )
 
     else:
         return JSONResponse(
-            content={"message": connection_status},
+            content={
+                "status": connection_status,
+                "message": "connection failed"
+            },
             status_code=status.HTTP_200_OK
         )

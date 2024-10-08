@@ -10,13 +10,12 @@ class MongoDB(BaseModel):
     username: str
     password: str
 
-    @classmethod
     def create_client(cls) -> MongoClient:
 
         client = MongoClient(
             host=cls.host,
             port=cls.port,
-            username=cls.user,
+            username=cls.username,
             password=cls.password,
             serverSelectionTimeoutMS=5000
         )
@@ -24,21 +23,16 @@ class MongoDB(BaseModel):
         return client
 
 
-    @classmethod
     def test_connection(cls) -> bool:
         client = None
         try:
             client = cls.create_client()
-            db = client[cls.db]
-            db.command("ping")
+            client.server_info()
             return True
-
-        except ServerSelectionTimeoutError:
-            return False
 
         except Exception as e:
             return False
-
+        
         finally:
             if client:
                 client.close()
