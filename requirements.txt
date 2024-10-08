@@ -16,6 +16,7 @@ Flask==3.0.3
 Flask-Cors==4.0.1
 future==1.0.0
 gunicorn==23.0.0
+h11==0.14.0
 identify==2.6.1
 idna==3.10
 iniconfig==2.0.0
@@ -49,6 +50,7 @@ starlette==0.38.6
 tomli==2.0.1
 typing_extensions==4.12.2
 tzdata==2024.1
+uvicorn==0.31.0
 virtualenv==20.26.5
 Werkzeug==3.0.3
 XlsxWriter==3.2.0
