@@ -1,9 +1,5 @@
 from pymongo import MongoClient
-# from pymongo_schema.compare import compare_schemas_bases
-# from pymongo_schema.export import transform_data_to_file
 from pymongo_schema.extract import extract_pymongo_client_schema
-
-# from pymongo_schema.tosql import mongo_schema_to_mapping
 
 
 def process_object(object_data, parent_key="", result=None, final_schema=None):
