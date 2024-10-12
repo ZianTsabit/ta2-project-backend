@@ -3,29 +3,15 @@ import itertools
 from pymongo import MongoClient
 
 
-def candidate_key_by_collection(
-        host: str,
-        port: int,
-        database: str,
-        collection: str,
-        user: str,
-        password: str):
+def candidate_key_by_collection(client: MongoClient):
     '''
     Function to get candidate key by collection
     '''
-
     total_documents = 0
     valid_fields = []
     candidate_key = []
     temp_candidate_key = []
     fields = set()
-
-    client = MongoClient(
-        host=host,
-        port=int(port),
-        username=user,
-        password=password,
-        serverSelectionTimeoutMS=5000)
 
     db = client[database]
     coll = db[collection]
@@ -101,34 +87,16 @@ def candidate_key_by_collection(
     return candidate_key
 
 
-def check_key_in_other_collection(
-        host: str,
-        port: int,
-        database: str,
-        src_coll: str,
-        trgt_coll: str,
-        user: str,
-        password: str,
-        key: str):
+def check_key_in_other_collection(client: MongoClient):
     '''
     Check if the instance of a field found in other collection
-
     get one instance of a key
     check all field on the target coll if that instance found or not
-
     '''
     pass
 
 
-def check_key_type(
-        host: str,
-        port: int,
-        database: str,
-        collection: str,
-        user: str,
-        password: str,
-        key: str
-        ):
+def check_key_type(client: MongoClient, key: str):
     '''
     Check data type of a field
     '''
@@ -142,15 +110,7 @@ def check_shortest_candidate_key(candidate_key: list):
     pass
 
 
-def primary_key_by_collection(
-        host: str,
-        port: int,
-        database: str,
-        collection: str,
-        user: str,
-        password: str,
-        candidate_key: list
-        ):
+def get_primary_key(client: MongoClient, collection: str):
     '''
     Function to get primary key by collection
 
