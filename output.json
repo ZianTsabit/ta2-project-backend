@@ -42,7 +42,7 @@
             "name": "courses",
             "data_type": "object",
             "not_null": false,
-            "unique": false
+            "unique": true
         }
     ]
 }

@@ -124,10 +124,23 @@ class MongoDB(BaseModel):
 
                 final_schema[key] = nested_result
 
+                unique = False
+                unique_values = collection.aggregate([
+                    {"$group": {
+                        "_id": f"${key}"}},
+                    {"$count": "uniqueCount"}
+                ])
+
+                unique_count = list(unique_values)[0]['uniqueCount']
+                uniqueness = unique_count / total_documents
+
+                if uniqueness == 1.0:
+                    unique = True
+
                 res["name"] = key
                 res["data_type"] = "object"
                 res["not_null"] = False
-                res["unique"] = False
+                res["unique"] = unique
 
             elif data_type == "ARRAY" and value["array_type"] == "OBJECT":
 
