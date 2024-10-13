@@ -247,28 +247,27 @@ class MongoDB(BaseModel):
 
                     if uniqueness == 1.0:
                         unique = True
-                else:
 
-                    pipeline = [
-                        {
-                            "$unwind": f"${parent_key}"
-                        }, {
-                            "$project": {
-                                "_id": 0,
-                                f"{key}": f"${parent_key}.{key}"
-                            }
-                        }, {
-                            "$group": {
-                                "_id": f"${key}"
-                            }
-                        }, {
-                            "$count": 'uniqueCount'
-                        }
-                    ]
+                    # pipeline = [
+                    #     {
+                    #         "$unwind": f"${parent_key}"
+                    #     }, {
+                    #         "$project": {
+                    #             "_id": 0,
+                    #             f"{key}": f"${parent_key}.{key}"
+                    #         }
+                    #     }, {
+                    #         "$group": {
+                    #             "_id": f"${key}"
+                    #         }
+                    #     }, {
+                    #         "$count": 'uniqueCount'
+                    #     }
+                    # ]
 
-                    unique_values = collection.aggregate(pipeline)
+                    # unique_values = collection.aggregate(pipeline)
 
-                    unique_count = list(unique_values)[0]['uniqueCount']
+                    # unique_count = list(unique_values)[0]['uniqueCount']
 
                 res["name"] = key
                 res["data_type"] = data_type
@@ -422,7 +421,7 @@ class MongoDB(BaseModel):
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_school',
+    db='db_school_2',
     username='root',
     password='rootadmin1234'
 )
