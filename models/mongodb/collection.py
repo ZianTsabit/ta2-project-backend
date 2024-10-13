@@ -7,4 +7,4 @@ from models.mongodb.field import Field
 
 class Collection(BaseModel):
     name: str
-    fields: List[Field]
+    fields: List[Field] = []

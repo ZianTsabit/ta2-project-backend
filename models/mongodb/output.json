@@ -1,0 +1,49 @@
+{
+    "db_univ": {
+        "courses": {
+            "count": 11,
+            "object": {
+                "_id": {
+                    "types_count": {
+                        "oid": 11
+                    },
+                    "count": 11,
+                    "type": "oid",
+                    "prop_in_object": 1.0
+                },
+                "student_id": {
+                    "types_count": {
+                        "oid": 11
+                    },
+                    "count": 11,
+                    "type": "oid",
+                    "prop_in_object": 1.0
+                },
+                "label": {
+                    "types_count": {
+                        "string": 11
+                    },
+                    "count": 11,
+                    "type": "string",
+                    "prop_in_object": 1.0
+                },
+                "nbr_hours": {
+                    "types_count": {
+                        "integer": 11
+                    },
+                    "count": 11,
+                    "type": "integer",
+                    "prop_in_object": 1.0
+                },
+                "level": {
+                    "types_count": {
+                        "string": 11
+                    },
+                    "count": 11,
+                    "type": "string",
+                    "prop_in_object": 1.0
+                }
+            }
+        }
+    }
+}
