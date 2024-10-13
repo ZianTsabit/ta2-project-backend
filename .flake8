@@ -1,8 +1,5 @@
 [flake8]
 exclude = 
-    */app/*
     */tests/*
-    */gooseqlify/*
     */ta2-venv/*
     */schemas/*
-    */ddl/*
