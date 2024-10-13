@@ -7,21 +7,15 @@
             "unique": false
         },
         {
-            "name": "level",
-            "data_type": "string",
-            "not_null": true,
-            "unique": false
-        },
-        {
-            "name": "_id",
-            "data_type": "oid",
-            "not_null": true,
-            "unique": false
-        },
-        {
             "name": "nbr_hours",
             "data_type": "integer",
             "not_null": false,
+            "unique": false
+        },
+        {
+            "name": "level",
+            "data_type": "string",
+            "not_null": true,
             "unique": false
         }
     ],
@@ -36,7 +30,7 @@
             "name": "name",
             "data_type": "string",
             "not_null": true,
-            "unique": false
+            "unique": true
         },
         {
             "name": "address",
@@ -48,7 +42,7 @@
             "name": "courses",
             "data_type": "object",
             "not_null": false,
-            "unique": true
+            "unique": false
         }
     ]
 }

@@ -124,6 +124,11 @@ class MongoDB(BaseModel):
 
                 final_schema[key] = nested_result
 
+                res["name"] = key
+                res["data_type"] = "object"
+                res["not_null"] = False
+                res["unique"] = False
+
             elif data_type == "ARRAY" and value["array_type"] == "OBJECT":
 
                 nested_result = cls.process_object(
@@ -140,10 +145,31 @@ class MongoDB(BaseModel):
                 if value['prop_in_object'] == 1.0:
                     not_null = True
 
+                pipeline = [
+                    {"$unwind": f"${key}"},
+                    {"$group": {
+                        "_id": "$_id",
+                        f"{key}": {"$addToSet": f"${key}"},
+                        "count": {"$sum": 1}
+                    }},
+                    {"$project": {
+                        "is_unique": {"$eq": [{"$size": f"${key}"}, "$count"]},
+                        f"{key}": 1
+                    }}
+                ]
+
+                results_unique = list(collection.aggregate(pipeline))
+
+                unique = True
+                for i in results_unique:
+                    if i['is_unique'] is False:
+                        unique = False
+                        break
+
                 res["name"] = key
-                res["data_type"] = "object"
+                res["data_type"] = "array"
                 res["not_null"] = not_null
-                res["unique"] = True
+                res["unique"] = unique
 
             elif data_type == "ARRAY" and value["array_type"] != "OBJECT":
 
@@ -383,7 +409,7 @@ class MongoDB(BaseModel):
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_school_2',
+    db='db_school',
     username='root',
     password='rootadmin1234'
 )
