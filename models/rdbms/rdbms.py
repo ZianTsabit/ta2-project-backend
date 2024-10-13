@@ -9,6 +9,7 @@ class Rdbms(BaseModel):
     username: str
     password: str
 
+
     def create_connection(cls) -> connect:
 
         connection = connect(
@@ -21,6 +22,7 @@ class Rdbms(BaseModel):
 
         return connection
 
+
     def test_connection(cls) -> bool:
         connection = None
         try:
@@ -30,6 +32,6 @@ class Rdbms(BaseModel):
             cursor.close()
             connection.close()
             return True
-        
+
         except OperationalError as e:
             return False
