@@ -8,5 +8,5 @@ from models.rdbms.attribute import Attribute
 class Relation(BaseModel):
     name: str
     attributes: List[Attribute]
-    relation_id: Attribute
-    foreign_keys: Attribute
+    primary_key: Attribute
+    foreign_key: Attribute
