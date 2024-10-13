@@ -1,3 +1,4 @@
+from bson import ObjectId
 from pymongo import MongoClient
 from pymongo_schema.extract import extract_pymongo_client_schema
 
@@ -47,19 +48,8 @@ def process_object(object_data, parent_key="", result=None, final_schema=None):
     return result
 
 
-def generate_basic_schema(
-        host: str,
-        port: int,
-        username: str,
-        password: str,
-        db_name: str):
+def generate_basic_schema(client: MongoClient):
 
-    client = MongoClient(
-        host=host,
-        port=port,
-        username=username,
-        password=password
-    )
     db = client[db_name]
     collections = db.list_collection_names()
     final_schema = {}
@@ -79,21 +69,8 @@ def generate_basic_schema(
     return final_schema
 
 
-def check_oid_in_trgt_coll(
-        host: str,
-        port: int,
-        username: str,
-        password: str,
-        db_name: str,
-        trgt_coll_name: str,
-        oid):
+def check_oid_in_trgt_coll(client: MongoClient, trgt_coll_name: str, oid: ObjectId):
 
-    client = MongoClient(
-        host=host,
-        port=port,
-        username=username,
-        password=password
-    )
     db = client[db_name]
     coll = db[trgt_coll_name]
 
@@ -104,20 +81,8 @@ def check_oid_in_trgt_coll(
     return foreign_key
 
 
-def find_foreign_keys(
-        host: str,
-        port: int,
-        username: str,
-        password: str,
-        db_name: str,
-        basic_schema: dict):
+def find_foreign_keys(client: MongoClient, basic_schema: dict):
 
-    client = MongoClient(
-        host=host,
-        port=port,
-        username=username,
-        password=password
-    )
     db = client[db_name]
 
     final_schema = {}

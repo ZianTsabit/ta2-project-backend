@@ -1,6 +1,10 @@
+from typing import List
+
 from pydantic import BaseModel
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
+
+from models.collection import Collection
 
 
 class MongoDB(BaseModel):
@@ -9,6 +13,7 @@ class MongoDB(BaseModel):
     db: str
     username: str
     password: str
+    collections: List[Collection]
 
     def create_client(cls) -> MongoClient:
 
