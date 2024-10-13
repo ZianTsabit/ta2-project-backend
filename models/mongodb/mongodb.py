@@ -47,53 +47,23 @@ class MongoDB(BaseModel):
 
     def init_collection(cls):
 
-        client = cls.create_client()
-        db = client[cls.db]
-        colls = db.list_collection_names()
+        basic_schema = cls.generate_basic_schema()
 
-        for coll in colls:
-            client_coll = db[coll]
+        for coll in basic_schema.keys():
             collection = Collection(
                 name=coll
             )
-
-            schema = extract_pymongo_client_schema(client, cls.db, coll)
-            total_documents = schema[cls.db][coll]['count']
-
-            for i in schema[cls.db][coll]['object'].keys():
-
-                null = True
-                if schema[cls.db][coll]['object'][i]['prop_in_object'] == 1.0:
-                    null = False
-
-                data_type = schema[cls.db][coll]['object'][i]['type']
-
-                unique_values = client_coll.aggregate([
-                    {"$group": {
-                        "_id": f"${i}"}},
-                    {"$count": "uniqueCount"}
-                ])
-
-                unique_count = list(unique_values)[0]['uniqueCount']
-
-                uniqueness = unique_count / total_documents
-
-                unique = False
-                if uniqueness == 1.0:
-                    unique = False
-
+            for field in basic_schema[coll]:
                 field = Field(
-                    name=i,
-                    data_type=data_type,
-                    null=null,
-                    unique=unique
+                    name=field["name"],
+                    data_type=field["data_type"],
+                    not_null=field["not_null"],
+                    unique=field["unique"]
                 )
 
                 collection.fields.append(field)
 
             cls.collections.append(collection)
-
-        client.close()
 
     def process_object(cls, coll_name, object_data, parent_key="", result=None, final_schema=None) -> dict:
         client = cls.create_client()
@@ -275,7 +245,7 @@ class MongoDB(BaseModel):
                 res["unique"] = unique
 
             result.append(res)
-
+        client.close()
         return result
 
     def generate_basic_schema(cls) -> dict:
@@ -421,12 +391,12 @@ class MongoDB(BaseModel):
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_school_2',
+    db='db_univ',
     username='root',
     password='rootadmin1234'
 )
 
-schema = mongo.generate_basic_schema()
+mongo.init_collection()
 
-with open("output.json", "w") as json_file:
-    json.dump(schema, json_file, indent=4)
+with open("mongo.json", "w") as json_file:
+    json.dump(mongo.dict(), json_file, indent=4)

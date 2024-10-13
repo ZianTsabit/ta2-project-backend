@@ -1,0 +1,79 @@
+{
+    "host": "localhost",
+    "port": 27017,
+    "db": "db_univ",
+    "username": "root",
+    "password": "rootadmin1234",
+    "collections": [
+        {
+            "name": "students",
+            "fields": [
+                {
+                    "name": "_id",
+                    "data_type": "oid",
+                    "not_null": true,
+                    "unique": true
+                },
+                {
+                    "name": "name",
+                    "data_type": "string",
+                    "not_null": true,
+                    "unique": true
+                },
+                {
+                    "name": "address",
+                    "data_type": "string",
+                    "not_null": true,
+                    "unique": false
+                },
+                {
+                    "name": "sex",
+                    "data_type": "string",
+                    "not_null": true,
+                    "unique": false
+                },
+                {
+                    "name": "job",
+                    "data_type": "string",
+                    "not_null": false,
+                    "unique": false
+                }
+            ]
+        },
+        {
+            "name": "courses",
+            "fields": [
+                {
+                    "name": "_id",
+                    "data_type": "oid",
+                    "not_null": true,
+                    "unique": true
+                },
+                {
+                    "name": "student_id",
+                    "data_type": "oid",
+                    "not_null": true,
+                    "unique": true
+                },
+                {
+                    "name": "label",
+                    "data_type": "string",
+                    "not_null": true,
+                    "unique": true
+                },
+                {
+                    "name": "nbr_hours",
+                    "data_type": "integer",
+                    "not_null": true,
+                    "unique": false
+                },
+                {
+                    "name": "level",
+                    "data_type": "string",
+                    "not_null": true,
+                    "unique": false
+                }
+            ]
+        }
+    ]
+}
