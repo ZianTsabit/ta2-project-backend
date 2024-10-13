@@ -3,7 +3,7 @@ import itertools
 from pymongo import MongoClient
 
 
-def get_candidate_key_by_collection(client: MongoClient):
+def get_candidate_key(client: MongoClient, collection: str):
     '''
     Function to get candidate key by collection
     '''
