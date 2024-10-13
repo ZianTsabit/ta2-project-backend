@@ -1,3 +1,5 @@
+import itertools
+import json
 from typing import List
 
 from pydantic import BaseModel
@@ -87,306 +89,306 @@ class MongoDB(BaseModel):
                     unique=unique
                 )
 
-                collection.append(field)
+                collection.fields.append(field)
 
             cls.collections.append(collection)
 
         client.close()
 
-    # def process_object(cls, object_data, parent_key="", result=None, final_schema=None) -> dict:
-    #     if result is None:
-    #         result = {}
-    #     if final_schema is None:
-    #         final_schema = {}
+    def process_object(cls, coll_name, object_data, parent_key="", result=None, final_schema=None) -> dict:
+        client = cls.create_client()
+        db = client[cls.db]
+        collection = db[coll_name]
 
-    #     for key, value in object_data.items():
-    #         data_type = value["type"]
-    #         if data_type == "OBJECT":
-    #             nested_result = cls.process_object(
-    #                 value["object"],
-    #                 key,
-    #                 {},
-    #                 final_schema
-    #             )
+        if result is None:
+            result = []
 
-    #             if parent_key:
-    #                 nested_result[f"{parent_key}_id"] = "oid"
-    #             final_schema[key] = nested_result
-    #             final_schema[key]["foreign_keys"] = {}
-    #             final_schema[key]["foreign_keys"][
-    #                 f"{parent_key}_id"
-    #             ] = f"{parent_key}._id"
-    #         elif data_type == "ARRAY" and value["array_type"] == "OBJECT":
-    #             nested_result = cls.process_object(
-    #                 value["object"],
-    #                 key,
-    #                 {},
-    #                 final_schema
-    #             )
-    #             if parent_key:
-    #                 nested_result[f"{parent_key}_id"] = "oid"
-    #             final_schema[key] = nested_result
-    #             final_schema[key]["foreign_keys"] = {}
-    #             final_schema[key]["foreign_keys"][
-    #                 f"{parent_key}_id"
-    #             ] = f"{parent_key}._id"
-    #         elif data_type == "ARRAY" and value["array_type"] == "oid":
-    #             result[f"{key}"] = value["array_type"]
-    #         else:
-    #             result[key] = data_type
+        if final_schema is None:
+            final_schema = {}
 
-    #     return result
+        for key, value in object_data.items():
 
-    # def generate_basic_schema(cls) -> dict:
+            res = {}
+            data_type = value["type"]
+            total_documents = value['count']
 
-    #     client = cls.create_client()
-    #     db = client[cls.db]
-    #     collections = db.list_collection_names()
-    #     final_schema = {}
+            if data_type == "OBJECT":
 
-    #     for coll in collections:
-    #         schema = extract_pymongo_client_schema(client, db, coll)
-    #         courses_data = schema[db_name][coll]
-    #         object_data = courses_data["object"]
-    #         processed_schema = process_object(
-    #             object_data,
-    #             coll,
-    #             final_schema=final_schema
-    #         )
-    #         final_schema[coll] = processed_schema
+                nested_result = cls.process_object(
+                    coll_name=coll_name,
+                    object_data=value["object"],
+                    parent_key=key,
+                    result=[],
+                    final_schema=final_schema
+                )
 
-    #     client.close()
-    #     return final_schema
+                final_schema[key] = nested_result
 
-    # def check_oid_in_trgt_coll(cls, trgt_coll: Collection, oid: ObjectId):
-    #     client = cls.create_client()
-    #     db = client[cls.db]
-    #     coll = db[trgt_coll.name]
+            elif data_type == "ARRAY" and value["array_type"] == "OBJECT":
 
-    #     foreign_key = coll.count_documents({'_id': oid}) > 0
+                nested_result = cls.process_object(
+                    coll_name=coll_name,
+                    object_data=value["object"],
+                    parent_key=key,
+                    result=[],
+                    final_schema=final_schema
+                )
 
-    #     client.close()
+                final_schema[key] = nested_result
 
-    #     return foreign_key
+                not_null = False
+                if value['prop_in_object'] == 1.0:
+                    not_null = True
 
-    # def find_foreign_keys(cls, basic_schema: dict):
-    #     client = cls.create_client()
-    #     db = client[cls.db]
+                res["name"] = key
+                res["data_type"] = "object"
+                res["not_null"] = not_null
+                res["unique"] = True
 
-    #     final_schema = {}
+            elif data_type == "ARRAY" and value["array_type"] != "OBJECT":
 
-    #     for collection_name, attributes in basic_schema.items():
-    #         if 'foreign_keys' not in attributes:
-    #             attributes['foreign_keys'] = {}
+                pipeline = [
+                    {"$unwind": f"${key}"},
+                    {"$group": {
+                        "_id": "$_id",
+                        f"{key}": {"$addToSet": f"${key}"},
+                        "count": {"$sum": 1}
+                    }},
+                    {"$project": {
+                        "is_unique": {"$eq": [{"$size": f"${key}"}, "$count"]},
+                        f"{key}": 1
+                    }}
+                ]
 
-    #         for attribute, attribute_type in attributes.items():
+                results_unique = list(collection.aggregate(pipeline))
 
-    #             if attribute_type == "oid" and attribute != "_id":
-    #                 coll = db[collection_name]
-    #                 oids = coll.distinct(attribute)
-    #                 for oid in oids:
-    #                     found = False
-    #                     for trgt_coll_name in basic_schema:
-    #                         if trgt_coll_name != collection_name:
-    #                             if check_oid_in_trgt_coll(
-    #                                     trgt_coll=trgt_coll_name,
-    #                                     oid=oid):
+                unique = True
+                for i in results_unique:
+                    if i['is_unique'] is False:
+                        unique = False
+                        break
 
-    #                                 if collection_name not in final_schema:
-    #                                     final_schema[
-    #                                         collection_name] = {'foreign_keys': {}}
+                not_null = False
+                if value['prop_in_object'] == 1.0:
+                    not_null = True
 
-    #                                 final_schema[collection_name][
-    #                                     'foreign_keys'][
-    #                                     attribute] = f"{trgt_coll_name}._id"
+                res["name"] = f"{key}"
+                res["data_type"] = "array"
+                res["not_null"] = not_null
+                res["unique"] = unique
 
-    #                                 found = True
-    #                                 break
+            else:
+                not_null = False
+                if coll_name == parent_key:
+                    if value['prop_in_object'] == 1.0:
+                        not_null = True
+                else:
+                    pipeline = [
+                        {
+                            "$unwind": f"${parent_key}"
+                        }, {
+                            '$count': 'count'
+                        }
+                    ]
+                    count_values = collection.aggregate(pipeline)
+                    res_count = list(count_values)[0]['count']
+                    if round(value['prop_in_object'], 2) == round(res_count / collection.count_documents({}), 2):
+                        not_null = True
 
-    #                     if found:
-    #                         break
+                unique = False
+                if coll_name == parent_key:
+                    unique_values = collection.aggregate([
+                        {"$group": {
+                            "_id": f"${key}"}},
+                        {"$count": "uniqueCount"}
+                    ])
 
-    #     for collection_name, update_info in final_schema.items():
-    #         if collection_name in basic_schema:
-    #             basic_schema[collection_name].update(update_info)
-    #         else:
-    #             basic_schema[collection_name] = update_info
+                    unique_count = list(unique_values)[0]['uniqueCount']
+                    uniqueness = unique_count / total_documents
 
-    #     client.close()
+                    if uniqueness == 1.0:
+                        unique = True
+                else:
 
-    #     return basic_schema
+                    pipeline = [
+                        {
+                            "$unwind": f"${parent_key}"
+                        }, {
+                            "$project": {
+                                "_id": 0,
+                                f"{key}": f"${parent_key}.{key}"
+                            }
+                        }, {
+                            "$group": {
+                                "_id": f"${key}"
+                            }
+                        }, {
+                            "$count": 'uniqueCount'
+                        }
+                    ]
 
-    # def generate_final_schema(tables: dict) -> dict:
+                    unique_values = collection.aggregate(pipeline)
 
-    #     cleaned_tables = {
-    #         table: dict(attributes)
-    #         for table, attributes in tables.items()
-    #     }
-    #     processed_pairs = set()
-    #     new_tables = {}
+                    unique_count = list(unique_values)[0]['uniqueCount']
 
-    #     for table1, attributes1 in tables.items():
-    #         for key1, reference1 in attributes1.get("foreign_keys", {}).items():
-    #             ref1 = reference1.split(".")[0]
-    #             if ref1 in tables:
-    #                 table2 = ref1
-    #                 attributes2 = tables[table2]
+                res["name"] = key
+                res["data_type"] = data_type
+                res["not_null"] = not_null
+                res["unique"] = unique
 
-    #                 pair = tuple(sorted([table1, table2]))
-    #                 if pair not in processed_pairs:
-    #                     foreign_keys = attributes2.get("foreign_keys", {})
-    #                     for key2, reference2 in foreign_keys.items():
-    #                         ref2 = reference2.split(".")[0]
-    #                         if ref2 == table1:
-    #                             relationship_table_name = f"{pair[0]}_{pair[1]}"
-    #                             new_tables[relationship_table_name] = {
-    #                                 f"{pair[0]}_id": "oid",
-    #                                 f"{pair[1]}_id": "oid",
-    #                                 "foreign_keys": {
-    #                                     f"{pair[0]}_id": f"{pair[0]}._id",
-    #                                     f"{pair[1]}_id": f"{pair[1]}._id"
-    #                                 }
-    #                             }
-    #                             processed_pairs.add(pair)
+            result.append(res)
 
-    #     for pair in processed_pairs:
-    #         table1, table2 = pair
-    #         if ("foreign_keys" in cleaned_tables[table1] and
-    #                 table2 in cleaned_tables[table1]["foreign_keys"]):
-    #             del cleaned_tables[table1]["foreign_keys"][table2]
-    #             del cleaned_tables[table1][table2]
-    #         if ("foreign_keys" in cleaned_tables[table2] and
-    #                 table1 in cleaned_tables[table2]["foreign_keys"]):
-    #             del cleaned_tables[table2]["foreign_keys"][table1]
-    #             del cleaned_tables[table2][table1]
+        return result
 
-    #     cleaned_tables.update(new_tables)
+    def generate_basic_schema(cls) -> dict:
 
-    #     return cleaned_tables
+        client = cls.create_client()
+        db = client[cls.db]
+        collections = db.list_collection_names()
+        final_schema = {}
 
-    # def get_candidate_key(cls, client: MongoClient, collection: Collection) -> List:
-    #     '''
-    #     Function to get candidate key by collection
-    #     '''
-    #     total_documents = 0
-    #     valid_fields = []
-    #     candidate_key = []
-    #     temp_candidate_key = []
-    #     fields = set()
+        for coll in collections:
+            schema = extract_pymongo_client_schema(client, cls.db, coll)
+            object_data = schema[cls.db][coll]["object"]
 
-    #     db = client[cls.db]
-    #     coll = db[collection.name]
+            processed_schema = cls.process_object(
+                coll_name=coll,
+                object_data=object_data,
+                parent_key=coll,
+                final_schema=final_schema
+            )
 
-    #     total_documents = coll.count_documents({})
+            final_schema[coll] = processed_schema
 
-    #     for document in coll.find():
-    #         fields.update(document.keys())
+        client.close()
 
-    #     for field in fields:
+        return final_schema
 
-    #         pipeline = [
-    #             {"$match": {field: {"$exists": True}}},
-    #             {"$group": {
-    #                 "_id": None,
-    #                 "count": {"$sum": 1}
-    #             }}
-    #         ]
+    def get_candidate_key(cls, client: MongoClient, collection: Collection) -> List:
+        '''
+        Function to get candidate key by collection
+        '''
+        total_documents = 0
+        valid_fields = []
+        candidate_key = []
+        temp_candidate_key = []
+        fields = set()
 
-    #         result = list(coll.aggregate(pipeline))
+        db = client[cls.db]
+        coll = db[collection.name]
 
-    #         if result[0]['count'] == total_documents:
-    #             valid_fields.append(field)
+        total_documents = coll.count_documents({})
 
-    #     for field in valid_fields:
+        for document in coll.find():
+            fields.update(document.keys())
 
-    #         unique_values = coll.aggregate([
-    #             {"$group": {
-    #                 "_id": f"${field}"}},
-    #             {"$count": "uniqueCount"}
-    #         ])
+        for field in fields:
 
-    #         unique_count = list(unique_values)[0]['uniqueCount']
+            pipeline = [
+                {"$match": {field: {"$exists": True}}},
+                {"$group": {
+                    "_id": None,
+                    "count": {"$sum": 1}
+                }}
+            ]
 
-    #         uniqueness = unique_count/total_documents
+            result = list(coll.aggregate(pipeline))
 
-    #         if uniqueness == 1.0:
-    #             candidate_key.append(field)
-    #         else:
-    #             temp_candidate_key.append(field)
+            if result[0]['count'] == total_documents:
+                valid_fields.append(field)
 
-    #     if len(temp_candidate_key) > 1:
+        for field in valid_fields:
 
-    #         combinations = []
-    #         for r in range(2, len(temp_candidate_key) + 1):
-    #             combinations.extend(itertools.combinations(temp_candidate_key, r))
+            unique_values = coll.aggregate([
+                {"$group": {
+                    "_id": f"${field}"}},
+                {"$count": "uniqueCount"}
+            ])
 
-    #         for comb in combinations:
-    #             rem_fields = list(comb)
+            unique_count = list(unique_values)[0]['uniqueCount']
 
-    #             inside_query = {}
-    #             for i in rem_fields:
-    #                 inside_query[i] = f'${i}'
+            uniqueness = unique_count / total_documents
 
-    #             unique_values = coll.aggregate([
-    #                 {
-    #                     '$group': {
-    #                         '_id': inside_query
-    #                     }
-    #                 }, {
-    #                     '$count': 'uniqueCount'
-    #                 }
-    #             ])
+            if uniqueness == 1.0:
+                candidate_key.append(field)
+            else:
+                temp_candidate_key.append(field)
 
-    #             result = list(unique_values)[0]['uniqueCount']
-    #             uniqueness = result/total_documents
+        if len(temp_candidate_key) > 1:
 
-    #             if uniqueness == 1.0:
-    #                 candidate_key.append(', '.join(rem_fields))
+            combinations = []
+            for r in range(2, len(temp_candidate_key) + 1):
+                combinations.extend(itertools.combinations(temp_candidate_key, r))
 
-    #     client.close()
+            for comb in combinations:
+                rem_fields = list(comb)
 
-    #     return candidate_key
+                inside_query = {}
+                for i in rem_fields:
+                    inside_query[i] = f'${i}'
 
-    # def check_key_in_other_collection(cls, client: MongoClient) -> bool:
-    #     '''
-    #     Check if the instance of a field found in other collection
-    #     get one instance of a key
-    #     check all field on the target coll if that instance found or not
-    #     '''
-    #     pass
+                unique_values = coll.aggregate([
+                    {
+                        '$group': {
+                            '_id': inside_query
+                        }
+                    }, {
+                        '$count': 'uniqueCount'
+                    }
+                ])
 
-    # def check_key_type(cls, client: MongoClient, key: Field) -> str:
-    #     '''
-    #     Check data type of a field
-    #     '''
-    #     pass
+                result = list(unique_values)[0]['uniqueCount']
+                uniqueness = result / total_documents
 
-    # def check_shortest_candidate_key(cls, candidate_key: list) -> str:
-    #     '''
-    #     Get the shortest candidate key
-    #     '''
-    #     pass
+                if uniqueness == 1.0:
+                    candidate_key.append(', '.join(rem_fields))
 
-    # def get_primary_key(cls, client: MongoClient, collection: Collection) -> str:
-    #     '''
-    #     Function to get primary key by collection
+        client.close()
 
-    #     priority:
-    #     1. candidate key found in other collection
-    #     2. candidate key have type oid
-    #     3. candidate key is shortest
-    #     4. else
-    #     '''
-    #     pass
+        return candidate_key
 
-# mongo = MongoDB(
-#     host="localhost",
-#     port=27017,
-#     db="db_univ",
-#     username="root",
-#     password="rootadmin1234"
-# )
+    def check_key_in_other_collection(cls, client: MongoClient) -> bool:
+        '''
+        Check if the instance of a field found in other collection
+        get one instance of a key
+        check all field on the target coll if that instance found or not
+        '''
+        pass
 
-# collections = mongo.init_collection()
+    def check_key_type(cls, client: MongoClient, key: Field) -> str:
+        '''
+        Check data type of a field
+        '''
+        pass
 
-# print(collections)
+    def check_shortest_candidate_key(cls, candidate_key: list) -> str:
+        '''
+        Get the shortest candidate key
+        '''
+        pass
+
+    def get_primary_key(cls, client: MongoClient, collection: Collection) -> str:
+        '''
+        Function to get primary key by collection
+
+        priority:
+        1. candidate key found in other collection
+        2. candidate key have type oid
+        3. candidate key is shortest
+        4. else
+        '''
+        pass
+
+
+mongo = MongoDB(
+    host='localhost',
+    port=27017,
+    db='db_school_2',
+    username='root',
+    password='rootadmin1234'
+)
+
+schema = mongo.generate_basic_schema()
+
+with open("output.json", "w") as json_file:
+    json.dump(schema, json_file, indent=4)

@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel
 
 from models.type import MongoType
@@ -8,5 +6,5 @@ from models.type import MongoType
 class Field(BaseModel):
     name: str
     data_type: MongoType
-    null: bool
+    not_null: bool
     unique: bool
