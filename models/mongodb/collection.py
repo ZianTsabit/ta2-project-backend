@@ -2,7 +2,7 @@ from typing import List
 
 from pydantic import BaseModel
 
-from models.field import Field
+from models.mongodb.field import Field
 
 
 class Collection(BaseModel):

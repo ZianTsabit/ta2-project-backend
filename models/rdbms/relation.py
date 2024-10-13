@@ -2,7 +2,7 @@ from typing import List
 
 from pydantic import BaseModel
 
-from models.attribute import Attribute
+from models.rdbms.attribute import Attribute
 
 
 class Relation(BaseModel):

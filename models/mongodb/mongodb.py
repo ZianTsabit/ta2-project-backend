@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
-from models.collection import Collection
+from models.mongodb.collection import Collection
 
 
 class MongoDB(BaseModel):

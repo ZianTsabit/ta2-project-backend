@@ -1,7 +1,7 @@
 from typing import List
 
-from models.rdbms import Rdbms
-from models.relation import Relation
+from models.rdbms.rdbms import Rdbms
+from models.rdbms.relation import Relation
 
 
 class MySQL(Rdbms):

@@ -2,7 +2,7 @@ from fastapi import APIRouter, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from models.mongodb import MongoDB
+from models.mongodb.mongodb import MongoDB
 
 router = APIRouter(
     prefix="/api/mongodb",

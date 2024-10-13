@@ -2,9 +2,9 @@ from fastapi import APIRouter, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from models.mysql import MySQL
-from models.postgresql import PostgreSQL
-from models.rdbms import Rdbms
+from models.rdbms.mysql import MySQL
+from models.rdbms.postgresql import PostgreSQL
+from models.rdbms.rdbms import Rdbms
 
 router = APIRouter(
     prefix="/api/rdbms",
