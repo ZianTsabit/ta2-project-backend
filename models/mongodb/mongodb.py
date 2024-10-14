@@ -368,32 +368,36 @@ class MongoDB(BaseModel):
             if f.name == src_key:
                 return f.data_type
 
-    def check_shortest_candidate_key(cls, candidate_key: list) -> str:
-        '''
-        Get the shortest candidate key
-        '''
-        pass
+    def check_shortest_candidate_key(cls, src_coll: str) -> str:
+
+        candidate_key = cls.get_candidate_key()[src_coll]
+
+        shortest = candidate_key[0].split(",")
+
+        for i in range(1, len(candidate_key)):
+            key = candidate_key[i].split(",")
+            if len(key) < len(shortest):
+                shortest = key
+
+        return shortest
 
     def get_primary_key(cls, coll_name: str) -> dict:
-        '''
-        Function to get primary key by collection
-        priority:
-        1. candidate key found in other collection
-        2. candidate key have type oid
-        3. candidate key is shortest
-        4. else
-        '''
         candidate_key = cls.get_candidate_key()
 
         for f in candidate_key[coll_name]:
 
             if cls.check_key_in_other_collection(f, coll_name) is True:
                 return f
-            # elif cls.check_key_type() == "oid":
-            #     return f
-            # elif cls.check_shortest_candidate_key():
-            #     return f
-        return False
+
+            elif cls.check_key_type(f, coll_name) == "oid":
+                return f
+
+            elif cls.check_shortest_candidate_key(coll_name) == f:
+                return f
+
+            else:
+                return f
+                # add new field for primary key
 
 
 mongo = MongoDB(
@@ -406,7 +410,7 @@ mongo = MongoDB(
 
 mongo.init_collection()
 
-print(mongo.check_key_type('name', 'students') == "oid")
+print(mongo.check_shortest_candidate_key('courses'))
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
