@@ -360,11 +360,13 @@ class MongoDB(BaseModel):
         client.close()
         return False
 
-    def check_key_type(cls, client: MongoClient, key: Field) -> str:
-        '''
-        Check data type of a field
-        '''
-        pass
+    def check_key_type(cls, src_key: str, src_coll: str) -> str:
+
+        fields = cls.collections[src_coll]
+
+        for f in fields:
+            if f.name == src_key:
+                return f.data_type
 
     def check_shortest_candidate_key(cls, candidate_key: list) -> str:
         '''
@@ -404,7 +406,7 @@ mongo = MongoDB(
 
 mongo.init_collection()
 
-print(mongo.get_primary_key('students'))
+print(mongo.check_key_type('name', 'students') == "oid")
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
