@@ -290,10 +290,11 @@ class MongoDB(BaseModel):
 
             for j in cls.collections[i]:
 
-                if j.unique is True:
-                    candidate_key[i].append(j.name)
-                else:
-                    temp_candidate_key[i].append(j.name)
+                if j.data_type != "array" or j.data_type != "object":
+                    if j.unique is True:
+                        candidate_key[i].append(j.name)
+                    else:
+                        temp_candidate_key[i].append(j.name)
 
             if len(temp_candidate_key[i]) > 1:
 
@@ -305,8 +306,8 @@ class MongoDB(BaseModel):
                     rem_fields = list(comb)
 
                     inside_query = {}
-                    for i in rem_fields:
-                        inside_query[i] = f'${i}'
+                    for z in rem_fields:
+                        inside_query[z] = f'${i}.{z}'
 
                     unique_values = collection.aggregate([
                         {
@@ -368,6 +369,17 @@ class MongoDB(BaseModel):
             if f.name == src_key:
                 return f.data_type
 
+    def check_embedding_collection(cls, src_coll: str) -> bool:
+
+        collections = list(cls.collections.keys())
+        collections.remove(src_coll)
+
+        for coll in collections:
+            for field in cls.collections[coll]:
+                if field.name == src_coll:
+                    return True
+        return False
+
     def check_shortest_candidate_key(cls, src_coll: str) -> str:
 
         candidate_key = cls.get_candidate_key()[src_coll]
@@ -403,14 +415,14 @@ class MongoDB(BaseModel):
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_univ',
+    db='db_school',
     username='root',
     password='rootadmin1234'
 )
 
 mongo.init_collection()
 
-print(mongo.check_shortest_candidate_key('courses'))
+mongo.check_embedding_collection('courses')
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
