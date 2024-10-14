@@ -1,5 +1,4 @@
 import itertools
-import json
 from typing import List
 
 from pydantic import BaseModel
@@ -272,84 +271,57 @@ class MongoDB(BaseModel):
 
         return final_schema
 
-    def get_candidate_key(cls, client: MongoClient, collection: Collection) -> List:
-        '''
-        Function to get candidate key by collection
-        '''
-        total_documents = 0
-        valid_fields = []
-        candidate_key = []
-        temp_candidate_key = []
-        fields = set()
+    def get_candidate_key(cls) -> List:
 
+        candidate_key = {}
+        temp_candidate_key = {}
+
+        client = cls.create_client()
         db = client[cls.db]
-        coll = db[collection.name]
 
-        total_documents = coll.count_documents({})
+        for i in cls.collections:
 
-        for document in coll.find():
-            fields.update(document.keys())
+            collection = db[i.name]
+            total_documents = collection.count_documents({})
 
-        for field in fields:
+            candidate_key[i.name] = []
+            temp_candidate_key[i.name] = []
 
-            pipeline = [
-                {"$match": {field: {"$exists": True}}},
-                {"$group": {
-                    "_id": None,
-                    "count": {"$sum": 1}
-                }}
-            ]
+            for j in i.fields:
 
-            result = list(coll.aggregate(pipeline))
+                if j.unique is True:
+                    candidate_key[i.name].append(j.name)
+                else:
+                    temp_candidate_key[i.name].append(j.name)
 
-            if result[0]['count'] == total_documents:
-                valid_fields.append(field)
+            if len(temp_candidate_key[i.name]) > 1:
 
-        for field in valid_fields:
+                combinations = []
+                for r in range(2, len(temp_candidate_key[i.name]) + 1):
+                    combinations.extend(itertools.combinations(temp_candidate_key[i.name], r))
 
-            unique_values = coll.aggregate([
-                {"$group": {
-                    "_id": f"${field}"}},
-                {"$count": "uniqueCount"}
-            ])
+                for comb in combinations:
+                    rem_fields = list(comb)
 
-            unique_count = list(unique_values)[0]['uniqueCount']
+                    inside_query = {}
+                    for i in rem_fields:
+                        inside_query[i] = f'${i}'
 
-            uniqueness = unique_count / total_documents
-
-            if uniqueness == 1.0:
-                candidate_key.append(field)
-            else:
-                temp_candidate_key.append(field)
-
-        if len(temp_candidate_key) > 1:
-
-            combinations = []
-            for r in range(2, len(temp_candidate_key) + 1):
-                combinations.extend(itertools.combinations(temp_candidate_key, r))
-
-            for comb in combinations:
-                rem_fields = list(comb)
-
-                inside_query = {}
-                for i in rem_fields:
-                    inside_query[i] = f'${i}'
-
-                unique_values = coll.aggregate([
-                    {
-                        '$group': {
-                            '_id': inside_query
+                    unique_values = collection.aggregate([
+                        {
+                            '$group': {
+                                '_id': inside_query
+                            }
+                        }, {
+                            '$count': 'uniqueCount'
                         }
-                    }, {
-                        '$count': 'uniqueCount'
-                    }
-                ])
+                    ])
 
-                result = list(unique_values)[0]['uniqueCount']
-                uniqueness = result / total_documents
+                    result = list(unique_values)[0]['uniqueCount']
+                    uniqueness = result / total_documents
 
-                if uniqueness == 1.0:
-                    candidate_key.append(', '.join(rem_fields))
+                    if uniqueness == 1.0:
+                        candidate_key[i.name].append(', '.join(rem_fields))
 
         client.close()
 
@@ -398,5 +370,6 @@ mongo = MongoDB(
 
 mongo.init_collection()
 
-with open("mongo.json", "w") as json_file:
-    json.dump(mongo.dict(), json_file, indent=4)
+candidate_key = mongo.get_candidate_key()
+
+print(candidate_key)
