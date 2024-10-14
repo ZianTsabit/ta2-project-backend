@@ -1,5 +1,6 @@
 import itertools
-from typing import List
+import json
+from typing import Dict
 
 from pydantic import BaseModel
 from pymongo import MongoClient
@@ -15,7 +16,7 @@ class MongoDB(BaseModel):
     db: str
     username: str
     password: str
-    collections: List[Collection] = []
+    collections: Dict = {}
 
     def create_client(cls) -> MongoClient:
 
@@ -62,7 +63,7 @@ class MongoDB(BaseModel):
 
                 collection.fields.append(field)
 
-            cls.collections.append(collection)
+            cls.collections[coll] = collection.fields
 
     def process_object(cls, coll_name, object_data, parent_key="", result=None, final_schema=None) -> dict:
         client = cls.create_client()
@@ -271,7 +272,7 @@ class MongoDB(BaseModel):
 
         return final_schema
 
-    def get_candidate_key(cls) -> List:
+    def get_candidate_key(cls) -> dict:
 
         candidate_key = {}
         temp_candidate_key = {}
@@ -279,26 +280,26 @@ class MongoDB(BaseModel):
         client = cls.create_client()
         db = client[cls.db]
 
-        for i in cls.collections:
+        for i in list(cls.collections.keys()):
 
-            collection = db[i.name]
+            collection = db[i]
             total_documents = collection.count_documents({})
 
-            candidate_key[i.name] = []
-            temp_candidate_key[i.name] = []
+            candidate_key[i] = []
+            temp_candidate_key[i] = []
 
-            for j in i.fields:
+            for j in cls.collections[i]:
 
                 if j.unique is True:
-                    candidate_key[i.name].append(j.name)
+                    candidate_key[i].append(j.name)
                 else:
-                    temp_candidate_key[i.name].append(j.name)
+                    temp_candidate_key[i].append(j.name)
 
-            if len(temp_candidate_key[i.name]) > 1:
+            if len(temp_candidate_key[i]) > 1:
 
                 combinations = []
-                for r in range(2, len(temp_candidate_key[i.name]) + 1):
-                    combinations.extend(itertools.combinations(temp_candidate_key[i.name], r))
+                for r in range(2, len(temp_candidate_key[i]) + 1):
+                    combinations.extend(itertools.combinations(temp_candidate_key[i], r))
 
                 for comb in combinations:
                     rem_fields = list(comb)
@@ -321,19 +322,43 @@ class MongoDB(BaseModel):
                     uniqueness = result / total_documents
 
                     if uniqueness == 1.0:
-                        candidate_key[i.name].append(', '.join(rem_fields))
+                        candidate_key[i].append(', '.join(rem_fields))
 
         client.close()
 
         return candidate_key
 
-    def check_key_in_other_collection(cls, client: MongoClient) -> bool:
-        '''
-        Check if the instance of a field found in other collection
-        get one instance of a key
-        check all field on the target coll if that instance found or not
-        '''
-        pass
+    def check_key_in_other_collection(cls, src_key: str, src_coll: str) -> bool:
+
+        client = cls.create_client()
+        db = client[cls.db]
+
+        collections = list(cls.collections.keys())
+        collections.remove(src_coll)
+
+        source_coll = db[src_coll]
+
+        for c in collections:
+            fields = cls.collections[c]
+            for field in fields:
+                pipeline = [
+                    {
+                        "$project": {
+                            f"{src_key}": 1
+                        }
+                    }
+                ]
+
+                values = list(source_coll.aggregate(pipeline))
+
+                for v in values:
+                    target_coll = db[c]
+                    find = v[src_key]
+                    found = list(target_coll.find({f"{field.name}": find}))
+                    if len(found) > 0:
+                        return True
+        client.close()
+        return False
 
     def check_key_type(cls, client: MongoClient, key: Field) -> str:
         '''
@@ -347,17 +372,26 @@ class MongoDB(BaseModel):
         '''
         pass
 
-    def get_primary_key(cls, client: MongoClient, collection: Collection) -> str:
+    def get_primary_key(cls, coll_name: str) -> dict:
         '''
         Function to get primary key by collection
-
         priority:
         1. candidate key found in other collection
         2. candidate key have type oid
         3. candidate key is shortest
         4. else
         '''
-        pass
+        candidate_key = cls.get_candidate_key()
+
+        for f in candidate_key[coll_name]:
+
+            if cls.check_key_in_other_collection(f, coll_name) is True:
+                return f
+            # elif cls.check_key_type() == "oid":
+            #     return f
+            # elif cls.check_shortest_candidate_key():
+            #     return f
+        return False
 
 
 mongo = MongoDB(
@@ -370,6 +404,7 @@ mongo = MongoDB(
 
 mongo.init_collection()
 
-candidate_key = mongo.get_candidate_key()
+print(mongo.get_primary_key('students'))
 
-print(candidate_key)
+with open("output.json", "w") as json_file:
+    json.dump(mongo.dict(), json_file, indent=4)
