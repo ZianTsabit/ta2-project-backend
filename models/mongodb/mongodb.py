@@ -261,10 +261,7 @@ class MongoDB(BaseModel):
 
         return final_schema
 
-    def get_candidate_key(cls, coll_name: str) -> dict:
-
-        candidate_key = {}
-        temp_candidate_key = {}
+    def get_candidate_key(cls, coll_name: str) -> list:
 
         client = cls.create_client()
         db = client[cls.db]
@@ -277,11 +274,10 @@ class MongoDB(BaseModel):
 
         for j in cls.collections[coll_name]:
 
-            if j.data_type != "array" or j.data_type != "object":
-                if j.unique is True:
-                    candidate_key.append(j.name)
-                else:
-                    temp_candidate_key.append(j.name)
+            if j.unique is True:
+                candidate_key.append(j.name)
+            else:
+                temp_candidate_key.append(j.name)
 
         if len(temp_candidate_key) > 1:
 
@@ -306,6 +302,89 @@ class MongoDB(BaseModel):
                     }
                 ])
 
+                result = list(unique_values)[0]['uniqueCount']
+                uniqueness = result / total_documents
+
+                if uniqueness == 1.0:
+                    candidate_key.append(', '.join(rem_fields))
+
+        client.close()
+
+        return candidate_key
+
+    def get_candidate_key_embedded(cls, coll_name: str) -> list:
+
+        client = cls.create_client()
+        db = client[cls.db]
+
+        candidate_key = []
+        temp_candidate_key = []
+
+        parent = cls.check_parent_collection(coll_name) + f'.{coll_name}'
+        parent_list = parent.split(".")
+        parent_coll = ".".join(parent_list[1:])
+
+        collection = db[parent_list[0]]
+        total_documents = collection.count_documents({})
+
+        for i in cls.collections[coll_name]:
+
+            pipeline = [
+                {
+                    '$project': {
+                        '_id': 0,
+                        f'{i.name}': f'${parent_coll}.{i.name}'
+                    }
+                }, {
+                    '$group': {
+                        '_id': f'${i.name}'
+                    }
+                }, {
+                    '$count': 'uniqueCount'
+                }
+            ]
+
+            unique_values = collection.aggregate(pipeline)
+
+            unique_count = list(unique_values)[0]['uniqueCount']
+            uniqueness = unique_count / total_documents
+
+            if uniqueness == 1.0:
+                candidate_key.append(i.name)
+            else:
+                temp_candidate_key.append(i.name)
+
+        if len(temp_candidate_key) > 0:
+
+            combinations = []
+            for r in range(2, len(temp_candidate_key) + 1):
+                combinations.extend(itertools.combinations(temp_candidate_key, r))
+
+            for comb in combinations:
+                rem_fields = list(comb)
+
+                project_query = {}
+                project_query["_id"] = 0
+                group_query = {}
+
+                for z in rem_fields:
+                    project_query[z] = f'${parent_coll}.{z}'
+                    group_query[z] = f'${z}'
+
+                pipeline = [
+                    {
+                        '$project': project_query
+                    },
+                    {
+                        '$group': {
+                            '_id': group_query
+                        }
+                    }, {
+                        '$count': 'uniqueCount'
+                    }
+                ]
+
+                unique_values = collection.aggregate(pipeline)
                 result = list(unique_values)[0]['uniqueCount']
                 uniqueness = result / total_documents
 
@@ -374,18 +453,33 @@ class MongoDB(BaseModel):
 
         return None
 
-    def check_shortest_candidate_key(cls, src_coll: str) -> str:
+    def check_parent_collection(cls, src_coll: str) -> bool:
 
-        candidate_key = cls.get_candidate_key(src_coll)
+        collections = list(cls.collections.keys())
+        collections.remove(src_coll)
+
+        for coll in collections:
+            for field in cls.collections[coll]:
+                if field.name == src_coll and (field.data_type == MongoType.OBJECT or field.data_type == MongoType.ARRAY_OF_OBJECT):
+
+                    deeper_check = cls.check_parent_collection(coll)
+                    if deeper_check:
+                        return coll + '.' + deeper_check
+                    return coll
+
+        return ''
+
+    def check_shortest_candidate_key(cls, candidate_key) -> str:
 
         shortest = candidate_key[0].split(",")
+        idx = 0
 
         for i in range(1, len(candidate_key)):
             key = candidate_key[i].split(",")
             if len(key) < len(shortest):
-                shortest = key
+                idx = 0
 
-        return shortest
+        return candidate_key[idx]
 
     def get_primary_key(cls, coll_name: str) -> str:
 
@@ -403,22 +497,31 @@ class MongoDB(BaseModel):
                 elif cls.check_key_type(f, coll_name) == "oid":
                     return f
 
-                elif cls.check_shortest_candidate_key(coll_name) == f:
+                elif cls.check_shortest_candidate_key(candidate_key) == f:
                     return f
 
         else:
 
             if parent_coll["data_type"] == MongoType.OBJECT:
-                return f"{parent_coll['name']}.{cls.get_primary_key(parent_coll)}"
 
-            else:
+                candidate_key = cls.get_candidate_key_embedded(coll_name)
+
+                for f in candidate_key:
+
+                    if len(f.split(',')) == 1 and cls.check_key_type(f, coll_name) == "oid":
+                        return f
+
+                    elif cls.check_shortest_candidate_key(candidate_key) == f:
+                        return f
+
+            elif parent_coll["data_type"] == MongoType.ARRAY_OF_OBJECT:
                 return None
 
 
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_school_2',
+    db='db_school',
     username='root',
     password='rootadmin1234'
 )
