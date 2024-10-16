@@ -8,6 +8,7 @@ from pymongo_schema.extract import extract_pymongo_client_schema
 
 from models.mongodb.collection import Collection
 from models.mongodb.field import Field
+from models.type import MongoType
 
 
 class MongoDB(BaseModel):
@@ -150,7 +151,7 @@ class MongoDB(BaseModel):
                         break
 
                 res["name"] = key
-                res["data_type"] = "array"
+                res["data_type"] = f"{data_type}.{value['array_type']}"
                 res["not_null"] = not_null
                 res["unique"] = unique
 
@@ -182,7 +183,7 @@ class MongoDB(BaseModel):
                     not_null = True
 
                 res["name"] = f"{key}"
-                res["data_type"] = "array"
+                res["data_type"] = f"{data_type}.{value['array_type']}"
                 res["not_null"] = not_null
                 res["unique"] = unique
 
@@ -218,27 +219,6 @@ class MongoDB(BaseModel):
                     if uniqueness == 1.0:
                         unique = True
 
-                    # pipeline = [
-                    #     {
-                    #         "$unwind": f"${parent_key}"
-                    #     }, {
-                    #         "$project": {
-                    #             "_id": 0,
-                    #             f"{key}": f"${parent_key}.{key}"
-                    #         }
-                    #     }, {
-                    #         "$group": {
-                    #             "_id": f"${key}"
-                    #         }
-                    #     }, {
-                    #         "$count": 'uniqueCount'
-                    #     }
-                    # ]
-
-                    # unique_values = collection.aggregate(pipeline)
-
-                    # unique_count = list(unique_values)[0]['uniqueCount']
-
                 res["name"] = key
                 res["data_type"] = data_type
                 res["not_null"] = not_null
@@ -272,7 +252,7 @@ class MongoDB(BaseModel):
 
         return final_schema
 
-    def get_candidate_key(cls) -> dict:
+    def get_candidate_key(cls, coll_name: str) -> dict:
 
         candidate_key = {}
         temp_candidate_key = {}
@@ -280,50 +260,48 @@ class MongoDB(BaseModel):
         client = cls.create_client()
         db = client[cls.db]
 
-        for i in list(cls.collections.keys()):
+        collection = db[coll_name]
+        total_documents = collection.count_documents({})
 
-            collection = db[i]
-            total_documents = collection.count_documents({})
+        candidate_key = []
+        temp_candidate_key = []
 
-            candidate_key[i] = []
-            temp_candidate_key[i] = []
+        for j in cls.collections[coll_name]:
 
-            for j in cls.collections[i]:
+            if j.data_type != "array" or j.data_type != "object":
+                if j.unique is True:
+                    candidate_key.append(j.name)
+                else:
+                    temp_candidate_key.append(j.name)
 
-                if j.data_type != "array" or j.data_type != "object":
-                    if j.unique is True:
-                        candidate_key[i].append(j.name)
-                    else:
-                        temp_candidate_key[i].append(j.name)
+        if len(temp_candidate_key) > 1:
 
-            if len(temp_candidate_key[i]) > 1:
+            combinations = []
+            for r in range(2, len(temp_candidate_key) + 1):
+                combinations.extend(itertools.combinations(temp_candidate_key, r))
 
-                combinations = []
-                for r in range(2, len(temp_candidate_key[i]) + 1):
-                    combinations.extend(itertools.combinations(temp_candidate_key[i], r))
+            for comb in combinations:
+                rem_fields = list(comb)
 
-                for comb in combinations:
-                    rem_fields = list(comb)
+                inside_query = {}
+                for z in rem_fields:
+                    inside_query[z] = f'${z}'
 
-                    inside_query = {}
-                    for z in rem_fields:
-                        inside_query[z] = f'${i}.{z}'
-
-                    unique_values = collection.aggregate([
-                        {
-                            '$group': {
-                                '_id': inside_query
-                            }
-                        }, {
-                            '$count': 'uniqueCount'
+                unique_values = collection.aggregate([
+                    {
+                        '$group': {
+                            '_id': inside_query
                         }
-                    ])
+                    }, {
+                        '$count': 'uniqueCount'
+                    }
+                ])
 
-                    result = list(unique_values)[0]['uniqueCount']
-                    uniqueness = result / total_documents
+                result = list(unique_values)[0]['uniqueCount']
+                uniqueness = result / total_documents
 
-                    if uniqueness == 1.0:
-                        candidate_key[i].append(', '.join(rem_fields))
+                if uniqueness == 1.0:
+                    candidate_key.append(', '.join(rem_fields))
 
         client.close()
 
@@ -376,13 +354,14 @@ class MongoDB(BaseModel):
 
         for coll in collections:
             for field in cls.collections[coll]:
-                if field.name == src_coll:
-                    return True
-        return False
+                if field.name == src_coll and field.data_type == MongoType.OBJECT:
+                    return coll
+
+        return None
 
     def check_shortest_candidate_key(cls, src_coll: str) -> str:
 
-        candidate_key = cls.get_candidate_key()[src_coll]
+        candidate_key = cls.get_candidate_key(src_coll)
 
         shortest = candidate_key[0].split(",")
 
@@ -394,22 +373,27 @@ class MongoDB(BaseModel):
         return shortest
 
     def get_primary_key(cls, coll_name: str) -> dict:
-        candidate_key = cls.get_candidate_key()
 
-        for f in candidate_key[coll_name]:
+        parent_coll = cls.check_embedding_collection(coll_name)
 
-            if cls.check_key_in_other_collection(f, coll_name) is True:
-                return f
+        if parent_coll is None:
 
-            elif cls.check_key_type(f, coll_name) == "oid":
-                return f
+            candidate_key = cls.get_candidate_key(coll_name)
 
-            elif cls.check_shortest_candidate_key(coll_name) == f:
-                return f
+            for f in candidate_key:
 
-            else:
-                return f
-                # add new field for primary key
+                if cls.check_key_in_other_collection(f, coll_name) is True:
+                    return f
+
+                elif cls.check_key_type(f, coll_name) == "oid":
+                    return f
+
+                elif cls.check_shortest_candidate_key(coll_name) == f:
+                    return f
+
+        else:
+
+            return f"{parent_coll}.{cls.get_primary_key(parent_coll)}"
 
 
 mongo = MongoDB(
@@ -422,7 +406,7 @@ mongo = MongoDB(
 
 mongo.init_collection()
 
-mongo.check_embedding_collection('courses')
+print(mongo.get_primary_key('courses'))
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
