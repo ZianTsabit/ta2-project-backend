@@ -66,7 +66,14 @@ class MongoDB(BaseModel):
 
             cls.collections[coll] = collection.fields
 
-    def process_object(cls, coll_name, object_data, parent_key="", result=None, final_schema=None) -> dict:
+    def process_object(
+            cls,
+            coll_name,
+            object_data,
+            parent_key="",
+            result=None,
+            final_schema=None) -> dict:
+
         client = cls.create_client()
         db = client[cls.db]
         collection = db[coll_name]
@@ -225,7 +232,9 @@ class MongoDB(BaseModel):
                 res["unique"] = unique
 
             result.append(res)
+
         client.close()
+
         return result
 
     def generate_basic_schema(cls) -> dict:
@@ -372,7 +381,7 @@ class MongoDB(BaseModel):
 
         return shortest
 
-    def get_primary_key(cls, coll_name: str) -> dict:
+    def get_primary_key(cls, coll_name: str) -> str:
 
         parent_coll = cls.check_embedding_collection(coll_name)
 
@@ -406,7 +415,7 @@ mongo = MongoDB(
 
 mongo.init_collection()
 
-print(mongo.get_primary_key('courses'))
+print(mongo.get_primary_key('students'))
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
