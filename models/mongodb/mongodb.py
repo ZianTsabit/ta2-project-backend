@@ -158,7 +158,7 @@ class MongoDB(BaseModel):
                         break
 
                 res["name"] = key
-                res["data_type"] = f"{data_type}.{value['array_type']}"
+                res["data_type"] = f"{data_type.lower()}.{value['array_type'].lower()}"
                 res["not_null"] = not_null
                 res["unique"] = unique
 
@@ -190,7 +190,7 @@ class MongoDB(BaseModel):
                     not_null = True
 
                 res["name"] = f"{key}"
-                res["data_type"] = f"{data_type}.{value['array_type']}"
+                res["data_type"] = f"{data_type.lower()}.{value['array_type'].lower()}"
                 res["not_null"] = not_null
                 res["unique"] = unique
 
@@ -316,7 +316,10 @@ class MongoDB(BaseModel):
 
         return candidate_key
 
-    def check_key_in_other_collection(cls, src_key: str, src_coll: str) -> bool:
+    def check_key_in_other_collection(
+            cls,
+            src_key: str,
+            src_coll: str) -> bool:
 
         client = cls.create_client()
         db = client[cls.db]
@@ -363,8 +366,11 @@ class MongoDB(BaseModel):
 
         for coll in collections:
             for field in cls.collections[coll]:
-                if field.name == src_coll and field.data_type == MongoType.OBJECT:
-                    return coll
+                if field.name == src_coll and (field.data_type == MongoType.OBJECT or field.data_type == MongoType.ARRAY_OF_OBJECT):
+                    return {
+                        "name": coll,
+                        "data_type": field.data_type
+                    }
 
         return None
 
@@ -402,20 +408,24 @@ class MongoDB(BaseModel):
 
         else:
 
-            return f"{parent_coll}.{cls.get_primary_key(parent_coll)}"
+            if parent_coll["data_type"] == MongoType.OBJECT:
+                return f"{parent_coll['name']}.{cls.get_primary_key(parent_coll)}"
+
+            else:
+                return None
 
 
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_school',
+    db='db_school_2',
     username='root',
     password='rootadmin1234'
 )
 
 mongo.init_collection()
 
-print(mongo.get_primary_key('students'))
+print(mongo.get_primary_key('courses'))
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
