@@ -1,7 +1,7 @@
 {
     "host": "localhost",
     "port": 27017,
-    "db": "db_school",
+    "db": "db_school_2",
     "username": "root",
     "password": "rootadmin1234",
     "collections": {
@@ -13,15 +13,21 @@
                 "unique": false
             },
             {
-                "name": "nbr_hours",
-                "data_type": "integer",
-                "not_null": false,
-                "unique": false
-            },
-            {
                 "name": "level",
                 "data_type": "string",
                 "not_null": true,
+                "unique": false
+            },
+            {
+                "name": "_id",
+                "data_type": "oid",
+                "not_null": true,
+                "unique": false
+            },
+            {
+                "name": "nbr_hours",
+                "data_type": "integer",
+                "not_null": false,
                 "unique": false
             }
         ],
@@ -36,7 +42,7 @@
                 "name": "name",
                 "data_type": "string",
                 "not_null": true,
-                "unique": true
+                "unique": false
             },
             {
                 "name": "address",
@@ -46,9 +52,9 @@
             },
             {
                 "name": "courses",
-                "data_type": "object",
-                "not_null": false,
-                "unique": true
+                "data_type": "array.object",
+                "not_null": true,
+                "unique": false
             }
         ]
     }

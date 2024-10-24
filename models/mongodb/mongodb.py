@@ -136,26 +136,7 @@ class MongoDB(BaseModel):
                 if value['prop_in_object'] == 1.0:
                     not_null = True
 
-                pipeline = [
-                    {"$unwind": f"${key}"},
-                    {"$group": {
-                        "_id": "$_id",
-                        f"{key}": {"$addToSet": f"${key}"},
-                        "count": {"$sum": 1}
-                    }},
-                    {"$project": {
-                        "is_unique": {"$eq": [{"$size": f"${key}"}, "$count"]},
-                        f"{key}": 1
-                    }}
-                ]
-
-                results_unique = list(collection.aggregate(pipeline))
-
-                unique = True
-                for i in results_unique:
-                    if i['is_unique'] is False:
-                        unique = False
-                        break
+                unique = False
 
                 res["name"] = key
                 res["data_type"] = f"{data_type.lower()}.{value['array_type'].lower()}"
@@ -349,10 +330,11 @@ class MongoDB(BaseModel):
             unique_count = list(unique_values)[0]['uniqueCount']
             uniqueness = unique_count / total_documents
 
-            if uniqueness == 1.0:
-                candidate_key.append(i.name)
-            else:
-                temp_candidate_key.append(i.name)
+            if i.not_null is True:
+                if uniqueness == 1.0:
+                    candidate_key.append(i.name)
+                else:
+                    temp_candidate_key.append(i.name)
 
         if len(temp_candidate_key) > 0:
 
@@ -372,6 +354,121 @@ class MongoDB(BaseModel):
                     group_query[z] = f'${z}'
 
                 pipeline = [
+                    {
+                        '$project': project_query
+                    },
+                    {
+                        '$group': {
+                            '_id': group_query
+                        }
+                    }, {
+                        '$count': 'uniqueCount'
+                    }
+                ]
+
+                unique_values = collection.aggregate(pipeline)
+                result = list(unique_values)[0]['uniqueCount']
+                uniqueness = result / total_documents
+
+                if uniqueness == 1.0:
+                    candidate_key.append(', '.join(rem_fields))
+
+        client.close()
+
+        return candidate_key
+
+    def get_candidate_key_array_embedded(cls, coll_name: str) -> list:
+
+        client = cls.create_client()
+        db = client[cls.db]
+
+        candidate_key = []
+        temp_candidate_key = []
+
+        parent = cls.check_parent_collection(coll_name) + f'.{coll_name}'
+        parent_list = parent.split(".")
+        parent_coll = ".".join(parent_list[1:])
+
+        collection = db[parent_list[0]]
+
+        total_document_pipeline = [
+            {
+                '$unwind': f'${parent_coll}'
+            }, {
+                '$group': {
+                    '_id': f'${parent_coll}'
+                }
+            }
+        ]
+
+        total_documents = len(list(collection.aggregate(total_document_pipeline)))
+
+        for i in cls.collections[coll_name]:
+
+            pipeline = [
+                {
+                    '$unwind': f'${coll_name}'
+                }, {
+                    '$group': {
+                        '_id': f'${coll_name}'
+                    }
+                }, {
+                    '$project': {
+                        '_id': 0,
+                        f'{i.name}': f'$_id.{i.name}'
+                    }
+                }, {
+                    '$group': {
+                        '_id': f'${i.name}'
+                    }
+                }, {
+                    '$match': {
+                        '_id': {
+                            '$ne': None
+                        }
+                    }
+                }, {
+                    '$count': 'uniqueCount'
+                }
+            ]
+
+            unique_values = collection.aggregate(pipeline)
+
+            unique_count = list(unique_values)[0]['uniqueCount']
+            uniqueness = unique_count / total_documents
+
+            if i.not_null is True:
+
+                if uniqueness == 1.0:
+                    candidate_key.append(i.name)
+                else:
+                    temp_candidate_key.append(i.name)
+
+        if len(temp_candidate_key) > 0:
+
+            combinations = []
+            for r in range(2, len(temp_candidate_key) + 1):
+                combinations.extend(itertools.combinations(temp_candidate_key, r))
+
+            for comb in combinations:
+                rem_fields = list(comb)
+
+                project_query = {}
+                project_query["_id"] = 0
+                group_query = {}
+
+                for z in rem_fields:
+                    project_query[z] = f'${parent_coll}.{z}'
+                    group_query[z] = f'${z}'
+
+                pipeline = [
+                    {
+                        '$unwind': f'${coll_name}'
+                    }, {
+                        '$group': {
+                            '_id': f'${coll_name}'
+                        }
+                    },
                     {
                         '$project': project_query
                     },
@@ -515,20 +612,29 @@ class MongoDB(BaseModel):
                         return f
 
             elif parent_coll["data_type"] == MongoType.ARRAY_OF_OBJECT:
-                return None
+
+                candidate_key = cls.get_candidate_key_array_embedded(coll_name)
+
+                for f in candidate_key:
+
+                    if len(f.split(',')) == 1 and cls.check_key_type(f, coll_name) == "oid":
+                        return f
+
+                    elif cls.check_shortest_candidate_key(candidate_key) == f:
+                        return f
 
 
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_school',
+    db='db_school_2',
     username='root',
     password='rootadmin1234'
 )
 
 mongo.init_collection()
 
-print(mongo.get_primary_key('courses'))
+print(mongo.get_candidate_key_array_embedded('courses'))
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
