@@ -634,7 +634,7 @@ mongo = MongoDB(
 
 mongo.init_collection()
 
-print(mongo.get_candidate_key_array_embedded('courses'))
+print(mongo.get_primary_key('courses'))
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
