@@ -634,5 +634,7 @@ mongo = MongoDB(
 
 mongo.init_collection()
 
+# TODO: Mapping Cardinalities
+
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
