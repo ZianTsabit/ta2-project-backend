@@ -636,5 +636,14 @@ mongo.init_collection()
 
 # TODO: Mapping Cardinalities
 
+# mapping caridanilities by data type of the fields
+# do the traverse by primary key
+
+# object -> one-to-one
+# array of object -> one-to-many
+# name of a collection appear in other collection and the name of second collection
+# also appear in the first collection -> many-to-many
+
+
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
