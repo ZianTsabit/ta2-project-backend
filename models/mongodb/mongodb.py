@@ -623,6 +623,34 @@ class MongoDB(BaseModel):
                     elif cls.check_shortest_candidate_key(candidate_key) == f:
                         return f
 
+    # TODO: Mapping Cardinalities
+
+    # mapping caridanilities by data type of the fields
+    # do the traverse by primary key
+
+    # object -> one-to-one
+    # array of object -> one-to-many
+    # name of a collection appear in other collection and the name of second collection
+    # also appear in the first collection -> many-to-many
+
+    def mapping_cardinalities_object(cls) -> str:
+        '''
+        return source dest table
+        '''
+        pass
+
+    def mapping_cardinalities_array_object(cls) -> str:
+        '''
+        return source dest table
+        '''
+        pass
+
+    def mapping_cardinalities_arry(cls) -> str:
+        '''
+        return source dest table
+        '''
+        pass
+
 
 mongo = MongoDB(
     host='localhost',
@@ -633,17 +661,6 @@ mongo = MongoDB(
 )
 
 mongo.init_collection()
-
-# TODO: Mapping Cardinalities
-
-# mapping caridanilities by data type of the fields
-# do the traverse by primary key
-
-# object -> one-to-one
-# array of object -> one-to-many
-# name of a collection appear in other collection and the name of second collection
-# also appear in the first collection -> many-to-many
-
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
