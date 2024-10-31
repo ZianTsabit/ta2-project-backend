@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class MongoType(str, Enum):
+    NULL = 'null'
     BOOL = "boolean"
     INTEGER = "integer"
     BIG_INT = "biginteger"
@@ -31,3 +32,9 @@ class PsqlType(str, Enum):
     STRING = "TEXT"
     OID = "TEXT"
     DB_REF = "TEXT"
+
+
+class CardinalitiesType(str, Enum):
+    ONE_TO_ONE = "one-to-one"
+    ONE_TO_MANY = "one-to-many"
+    MANY_TO_MANY = "many-to-many"

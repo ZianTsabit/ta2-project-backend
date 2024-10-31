@@ -6,9 +6,10 @@ from pydantic import BaseModel
 from pymongo import MongoClient
 from pymongo_schema.extract import extract_pymongo_client_schema
 
+from models.mongodb.cardinalities import Cardinalities
 from models.mongodb.collection import Collection
 from models.mongodb.field import Field
-from models.type import MongoType
+from models.type import CardinalitiesType, MongoType
 
 
 class MongoDB(BaseModel):
@@ -102,6 +103,24 @@ class MongoDB(BaseModel):
 
                 final_schema[key] = nested_result
 
+                not_null = False
+                count = collection.aggregate([
+                    {
+                        '$match': {
+                            f'{key}': {
+                                '$ne': None
+                            }
+                        }
+                    }, {
+                        '$count': 'count'
+                    }
+                ])
+
+                count_values = list(count)[0]['count']
+
+                if count_values == total_documents:
+                    not_null = True
+
                 unique = False
                 unique_values = collection.aggregate([
                     {"$group": {
@@ -117,7 +136,7 @@ class MongoDB(BaseModel):
 
                 res["name"] = key
                 res["data_type"] = "object"
-                res["not_null"] = False
+                res["not_null"] = not_null
                 res["unique"] = unique
 
             elif data_type == "ARRAY" and value["array_type"] == "OBJECT":
@@ -137,6 +156,50 @@ class MongoDB(BaseModel):
                     not_null = True
 
                 unique = False
+
+                array_size_count = collection.aggregate([
+                    {
+                        '$project': {
+                            '_id': 0,
+                            'arraySize': {
+                                '$size': f'${key}'
+                            }
+                        }
+                    }, {
+                        '$group': {
+                            '_id': None,
+                            'totalArraySize': {
+                                '$sum': '$arraySize'
+                            }
+                        }
+                    }
+                ])
+
+                total_array_document = collection.aggregate([
+                    {
+                        '$unwind': {
+                            'path': f'${key}',
+                            'preserveNullAndEmptyArrays': True
+                        }
+                    }, {
+                        '$project': {
+                            '_id': 0,
+                            f'{key}': 1
+                        }
+                    }, {
+                        '$group': {
+                            '_id': f'${key}'
+                        }
+                    }, {
+                        '$count': 'totalArrayDoc'
+                    }
+                ])
+
+                array_size = list(array_size_count)[0]['totalArraySize']
+                total_array = list(total_array_document)[0]['totalArrayDoc']
+
+                if array_size == total_array:
+                    unique = True
 
                 res["name"] = key
                 res["data_type"] = f"{data_type.lower()}.{value['array_type'].lower()}"
@@ -627,6 +690,8 @@ class MongoDB(BaseModel):
 
     # mapping caridanilities by data type of the fields
     # do the traverse by primary key
+    # check the primary key -> klo exist di collection lain, cek lagi, apakah di collection itu dia refer collection yang pertama
+    # klo iya maka many to many
 
     # object -> one-to-one
     # array of object -> one-to-many
@@ -645,22 +710,83 @@ class MongoDB(BaseModel):
         '''
         pass
 
-    def mapping_cardinalities_arry(cls) -> str:
+    def mapping_cardinalities_array(cls) -> str:
         '''
-        return source dest table
+        for array type the type of cardinalities is many-to-one
         '''
         pass
+
+    def mapping_cardinalities(cls, coll_name: str) -> str:
+
+        res = []
+
+        collections = list(cls.collections.keys())
+        collections.remove(coll_name)
+
+        for coll in collections:
+
+            field = list(filter(lambda x: x.name == coll_name, cls.collections[coll]))
+
+            for f in field:
+
+                if f.data_type == MongoType.OBJECT:
+
+                    res.append(
+                        Cardinalities(
+                            source=coll_name,
+                            destination=coll,
+                            type=CardinalitiesType.ONE_TO_ONE
+                        )
+                    )
+
+                elif f.data_type == MongoType.ARRAY_OF_OBJECT:
+
+                    if f.unique is True:
+
+                        res.append(
+                            Cardinalities(
+                                source=coll,
+                                destination=coll_name,
+                                type=CardinalitiesType.ONE_TO_MANY
+                            )
+                        )
+
+                    else:
+
+                        res.append(
+                            Cardinalities(
+                                source=coll,
+                                destination=coll_name,
+                                type=CardinalitiesType.MANY_TO_MANY
+                            )
+                        )
+
+        for f in cls.collections[coll_name]:
+
+            if f.data_type == MongoType.ARRAY_OF_STRING or f.data_type == MongoType.ARRAY_OF_BIG_INT or f.data_type == MongoType.ARRAY_OF_FLOAT or f.data_type == MongoType.ARRAY_OF_NUM or f.data_type == MongoType.ARRAY_OF_DATE:
+
+                res.append(
+                    Cardinalities(
+                        source=coll_name,
+                        destination=f.name,
+                        type=CardinalitiesType.ONE_TO_MANY
+                    )
+                )
+
+        return res
 
 
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_school_2',
+    db='shop',
     username='root',
     password='rootadmin1234'
 )
 
 mongo.init_collection()
+
+print(mongo.mapping_cardinalities('Product'))
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
