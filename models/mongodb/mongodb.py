@@ -731,13 +731,25 @@ class MongoDB(BaseModel):
 
                 if f.data_type == MongoType.OBJECT:
 
-                    res.append(
-                        Cardinalities(
-                            source=coll_name,
-                            destination=coll,
-                            type=CardinalitiesType.ONE_TO_ONE
+                    if f.unique is True:
+
+                        res.append(
+                            Cardinalities(
+                                source=coll_name,
+                                destination=coll,
+                                type=CardinalitiesType.ONE_TO_ONE
+                            )
                         )
-                    )
+
+                    else:
+
+                        res.append(
+                            Cardinalities(
+                                source=coll,
+                                destination=coll_name,
+                                type=CardinalitiesType.ONE_TO_MANY
+                            )
+                        )
 
                 elif f.data_type == MongoType.ARRAY_OF_OBJECT:
 
@@ -773,20 +785,64 @@ class MongoDB(BaseModel):
                     )
                 )
 
+            elif f.data_type == MongoType.OBJECT:
+
+                if f.unique is True:
+
+                    res.append(
+                        Cardinalities(
+                            source=coll_name,
+                            destination=f.name,
+                            type=CardinalitiesType.ONE_TO_ONE
+                        )
+                    )
+
+                else:
+
+                    res.append(
+                        Cardinalities(
+                            source=coll_name,
+                            destination=f.name,
+                            type=CardinalitiesType.ONE_TO_MANY
+                        )
+                    )
+
+            elif f.data_type == MongoType.ARRAY_OF_OBJECT:
+
+                if f.unique is True:
+
+                    res.append(
+                        Cardinalities(
+                            source=coll_name,
+                            destination=f.name,
+                            type=CardinalitiesType.ONE_TO_MANY
+                        )
+                    )
+
+                else:
+
+                    res.append(
+                        Cardinalities(
+                            source=coll_name,
+                            destination=f.name,
+                            type=CardinalitiesType.MANY_TO_MANY
+                        )
+                    )
+
         return res
 
 
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='shop',
+    db='db_school',
     username='root',
     password='rootadmin1234'
 )
 
 mongo.init_collection()
 
-print(mongo.mapping_cardinalities('Product'))
+print(mongo.mapping_cardinalities('students'))
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
