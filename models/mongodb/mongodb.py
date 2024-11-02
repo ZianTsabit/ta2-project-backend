@@ -1,5 +1,4 @@
 import itertools
-import json
 from typing import Dict
 
 from pydantic import BaseModel
@@ -884,18 +883,31 @@ class MongoDB(BaseModel):
 
         return res
 
+    def mapping_all_cardinalities(cls):
+
+        collections = list(cls.collections.keys())
+        res = []
+
+        for coll in collections:
+
+            cardinalities = cls.mapping_cardinalities(coll)
+
+            for card in cardinalities:
+
+                if not any(((d.source == card.source and d.destination == card.destination) or (d.source == card.destination and d.destination == card.source)) for d in res):
+                    res.append(card)
+
+        return res
+
 
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_univ_2',
+    db='db_univ',
     username='root',
     password='rootadmin1234'
 )
 
 mongo.init_collection()
 
-print(mongo.mapping_cardinalities('courses'))
-
-with open("output.json", "w") as json_file:
-    json.dump(mongo.dict(), json_file, indent=4)
+mongo.mapping_all_cardinalities()
