@@ -825,37 +825,35 @@ class MongoDB(BaseModel):
                         )
                     )
 
-            else:
+        primary_key = cls.get_primary_key(coll_name)
 
-                primary_key = cls.get_primary_key(coll_name)
+        check_key = cls.check_key_in_other_collection(primary_key, coll_name)
 
-                check_key = cls.check_key_in_other_collection(primary_key, coll_name)
+        if check_key["status"] is True:
 
-                if check_key["status"] is True:
+            field = list(filter(lambda x: x.name == check_key["field"], cls.collections[check_key["collection"]]))
 
-                    field = list(filter(lambda x: x.name == check_key["field"], cls.collections[check_key["collection"]]))
+            for f in field:
 
-                    for f in field:
+                if f.unique is True:
 
-                        if f.unique is True:
+                    res.append(
+                        Cardinalities(
+                            source=coll_name,
+                            destination=check_key["collection"],
+                            type=CardinalitiesType.ONE_TO_ONE
+                        )
+                    )
 
-                            res.append(
-                                Cardinalities(
-                                    source=coll_name,
-                                    destination=check_key["collection"],
-                                    type=CardinalitiesType.ONE_TO_ONE
-                                )
-                            )
+                else:
 
-                        else:
-
-                            res.append(
-                                Cardinalities(
-                                    source=coll_name,
-                                    destination=check_key["collection"],
-                                    type=CardinalitiesType.ONE_TO_MANY
-                                )
-                            )
+                    res.append(
+                        Cardinalities(
+                            source=coll_name,
+                            destination=check_key["collection"],
+                            type=CardinalitiesType.ONE_TO_MANY
+                        )
+                    )
 
         return res
 
