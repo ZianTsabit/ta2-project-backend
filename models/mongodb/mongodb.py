@@ -560,6 +560,8 @@ class MongoDB(BaseModel):
             src_key: str,
             src_coll: str) -> bool:
 
+        res = {}
+
         client = cls.create_client()
         db = client[cls.db]
 
@@ -585,10 +587,22 @@ class MongoDB(BaseModel):
                     target_coll = db[c]
                     find = v[src_key]
                     found = list(target_coll.find({f"{field.name}": find}))
+
                     if len(found) > 0:
-                        return True
+
+                        res["collection"] = c
+                        res["field"] = field.name
+                        res["status"] = True
+
+                        return res
+
         client.close()
-        return False
+
+        res["collection"] = None
+        res["field"] = None
+        res["status"] = False
+
+        return res
 
     def check_key_type(cls, src_key: str, src_coll: str) -> str:
 
@@ -651,7 +665,7 @@ class MongoDB(BaseModel):
 
             for f in candidate_key:
 
-                if cls.check_key_in_other_collection(f, coll_name) is True:
+                if cls.check_key_in_other_collection(f, coll_name)["status"] is True:
                     return f
 
                 elif cls.check_key_type(f, coll_name) == "oid":
@@ -697,24 +711,6 @@ class MongoDB(BaseModel):
     # array of object -> one-to-many
     # name of a collection appear in other collection and the name of second collection
     # also appear in the first collection -> many-to-many
-
-    def mapping_cardinalities_object(cls) -> str:
-        '''
-        return source dest table
-        '''
-        pass
-
-    def mapping_cardinalities_array_object(cls) -> str:
-        '''
-        return source dest table
-        '''
-        pass
-
-    def mapping_cardinalities_array(cls) -> str:
-        '''
-        for array type the type of cardinalities is many-to-one
-        '''
-        pass
 
     def mapping_cardinalities(cls, coll_name: str) -> str:
 
@@ -829,13 +825,45 @@ class MongoDB(BaseModel):
                         )
                     )
 
+            else:
+
+                primary_key = cls.get_primary_key(coll_name)
+
+                check_key = cls.check_key_in_other_collection(primary_key, coll_name)
+
+                if check_key["status"] is True:
+
+                    field = list(filter(lambda x: x.name == check_key["field"], cls.collections[check_key["collection"]]))
+
+                    for f in field:
+
+                        if f.unique is True:
+
+                            res.append(
+                                Cardinalities(
+                                    source=coll_name,
+                                    destination=check_key["collection"],
+                                    type=CardinalitiesType.ONE_TO_ONE
+                                )
+                            )
+
+                        else:
+
+                            res.append(
+                                Cardinalities(
+                                    source=coll_name,
+                                    destination=check_key["collection"],
+                                    type=CardinalitiesType.ONE_TO_MANY
+                                )
+                            )
+
         return res
 
 
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_school',
+    db='db_univ',
     username='root',
     password='rootadmin1234'
 )
