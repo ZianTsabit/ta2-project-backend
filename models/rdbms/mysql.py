@@ -25,9 +25,11 @@ class MySQL(Rdbms):
     relations: List[Relation] = []
 
     def process_collection(cls, collection: Collection):
+        # TODO: add relation that not exist in cardinalities to cls.relations
         pass
 
     def process_mapping_cardinalities(cls, cardinalities: List[Cardinalities]):
+        # TODO: add relation to cls.relations
         pass
 
     def data_type_mapping(cls, mongo_type: MongoType) -> MysqlType:
