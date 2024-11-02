@@ -723,107 +723,144 @@ class MongoDB(BaseModel):
 
             field = list(filter(lambda x: x.name == coll_name, cls.collections[coll]))
 
-            for f in field:
+            if len(field) > 0:
 
-                if f.data_type == MongoType.OBJECT:
+                for f in field:
 
-                    if f.unique is True:
+                    field_2 = list(filter(lambda x: x.name == coll, cls.collections[coll_name]))
 
-                        res.append(
-                            Cardinalities(
-                                source=coll_name,
-                                destination=coll,
-                                type=CardinalitiesType.ONE_TO_ONE
-                            )
+                    if len(field_2) > 0:
+
+                        cardinality = Cardinalities(
+                            source=coll_name,
+                            destination=coll,
+                            type=CardinalitiesType.MANY_TO_MANY
                         )
+
+                        if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                            res.append(cardinality)
 
                     else:
 
-                        res.append(
-                            Cardinalities(
+                        if f.data_type == MongoType.OBJECT:
+
+                            if f.unique is True:
+
+                                cardinality = Cardinalities(
+                                    source=coll_name,
+                                    destination=coll,
+                                    type=CardinalitiesType.ONE_TO_ONE
+                                )
+
+                                if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                                    res.append(cardinality)
+
+                            else:
+
+                                cardinality = Cardinalities(
+                                    source=coll,
+                                    destination=coll_name,
+                                    type=CardinalitiesType.ONE_TO_MANY
+                                )
+
+                                if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                                    res.append(cardinality)
+
+                        elif f.data_type == MongoType.ARRAY_OF_OBJECT:
+
+                            if f.unique is True:
+
+                                cardinality = Cardinalities(
+                                    source=coll,
+                                    destination=coll_name,
+                                    type=CardinalitiesType.ONE_TO_MANY
+                                )
+
+                                if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                                    res.append(cardinality)
+
+                            else:
+
+                                cardinality = Cardinalities(
+                                    source=coll,
+                                    destination=coll_name,
+                                    type=CardinalitiesType.MANY_TO_MANY
+                                )
+
+                                if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                                    res.append(cardinality)
+
+                        elif f.data_type == MongoType.ARRAY_OF_STRING or f.data_type == MongoType.ARRAY_OF_BIG_INT or f.data_type == MongoType.ARRAY_OF_FLOAT or f.data_type == MongoType.ARRAY_OF_NUM or f.data_type == MongoType.ARRAY_OF_DATE or f.data_type == MongoType.ARRAY_OF_OID:
+
+                            cardinality = Cardinalities(
                                 source=coll,
                                 destination=coll_name,
                                 type=CardinalitiesType.ONE_TO_MANY
                             )
-                        )
 
-                elif f.data_type == MongoType.ARRAY_OF_OBJECT:
-
-                    if f.unique is True:
-
-                        res.append(
-                            Cardinalities(
-                                source=coll,
-                                destination=coll_name,
-                                type=CardinalitiesType.ONE_TO_MANY
-                            )
-                        )
-
-                    else:
-
-                        res.append(
-                            Cardinalities(
-                                source=coll,
-                                destination=coll_name,
-                                type=CardinalitiesType.MANY_TO_MANY
-                            )
-                        )
+                            if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                                res.append(cardinality)
 
         for f in cls.collections[coll_name]:
 
-            if f.data_type == MongoType.ARRAY_OF_STRING or f.data_type == MongoType.ARRAY_OF_BIG_INT or f.data_type == MongoType.ARRAY_OF_FLOAT or f.data_type == MongoType.ARRAY_OF_NUM or f.data_type == MongoType.ARRAY_OF_DATE:
+            if f.data_type == MongoType.ARRAY_OF_STRING or f.data_type == MongoType.ARRAY_OF_BIG_INT or f.data_type == MongoType.ARRAY_OF_FLOAT or f.data_type == MongoType.ARRAY_OF_NUM or f.data_type == MongoType.ARRAY_OF_DATE or f.data_type == MongoType.ARRAY_OF_OID:
 
-                res.append(
-                    Cardinalities(
-                        source=coll_name,
-                        destination=f.name,
-                        type=CardinalitiesType.ONE_TO_MANY
-                    )
+                cardinality = Cardinalities(
+                    source=coll_name,
+                    destination=f.name,
+                    type=CardinalitiesType.ONE_TO_MANY
                 )
+
+                if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                    res.append(cardinality)
 
             elif f.data_type == MongoType.OBJECT:
 
                 if f.unique is True:
 
-                    res.append(
-                        Cardinalities(
-                            source=coll_name,
-                            destination=f.name,
-                            type=CardinalitiesType.ONE_TO_ONE
-                        )
+                    cardinality = Cardinalities(
+                        source=coll_name,
+                        destination=f.name,
+                        type=CardinalitiesType.ONE_TO_ONE
                     )
+
+                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                        res.append(cardinality)
 
                 else:
 
-                    res.append(
-                        Cardinalities(
-                            source=coll_name,
-                            destination=f.name,
-                            type=CardinalitiesType.ONE_TO_MANY
-                        )
+                    cardinality = Cardinalities(
+                        source=coll_name,
+                        destination=f.name,
+                        type=CardinalitiesType.ONE_TO_MANY
                     )
+
+                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                        res.append(cardinality)
 
             elif f.data_type == MongoType.ARRAY_OF_OBJECT:
 
                 if f.unique is True:
 
-                    res.append(
-                        Cardinalities(
-                            source=coll_name,
-                            destination=f.name,
-                            type=CardinalitiesType.ONE_TO_MANY
-                        )
+                    cardinality = Cardinalities(
+                        source=coll_name,
+                        destination=f.name,
+                        type=CardinalitiesType.ONE_TO_MANY
                     )
+
+                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                        res.append(cardinality)
 
                 else:
 
-                    res.append(
-                        Cardinalities(
-                            source=coll_name,
-                            destination=f.name,
-                            type=CardinalitiesType.MANY_TO_MANY
-                        )
+                    cardinality = Cardinalities(
+                        source=coll_name,
+                        destination=f.name,
+                        type=CardinalitiesType.MANY_TO_MANY
                     )
+
+                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                        res.append(cardinality)
 
         primary_key = cls.get_primary_key(coll_name)
 
@@ -837,23 +874,25 @@ class MongoDB(BaseModel):
 
                 if f.unique is True:
 
-                    res.append(
-                        Cardinalities(
-                            source=coll_name,
-                            destination=check_key["collection"],
-                            type=CardinalitiesType.ONE_TO_ONE
-                        )
+                    cardinality = Cardinalities(
+                        source=coll_name,
+                        destination=check_key["collection"],
+                        type=CardinalitiesType.ONE_TO_ONE
                     )
+
+                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                        res.append(cardinality)
 
                 else:
 
-                    res.append(
-                        Cardinalities(
-                            source=coll_name,
-                            destination=check_key["collection"],
-                            type=CardinalitiesType.ONE_TO_MANY
-                        )
+                    cardinality = Cardinalities(
+                        source=coll_name,
+                        destination=check_key["collection"],
+                        type=CardinalitiesType.ONE_TO_MANY
                     )
+
+                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                        res.append(cardinality)
 
         return res
 
@@ -861,14 +900,14 @@ class MongoDB(BaseModel):
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_univ',
+    db='db_univ_2',
     username='root',
     password='rootadmin1234'
 )
 
 mongo.init_collection()
 
-print(mongo.mapping_cardinalities('students'))
+print(mongo.mapping_cardinalities('courses'))
 
 with open("output.json", "w") as json_file:
     json.dump(mongo.dict(), json_file, indent=4)
