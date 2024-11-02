@@ -898,16 +898,3 @@ class MongoDB(BaseModel):
                     res.append(card)
 
         return res
-
-
-mongo = MongoDB(
-    host='localhost',
-    port=27017,
-    db='db_univ',
-    username='root',
-    password='rootadmin1234'
-)
-
-mongo.init_collection()
-
-mongo.mapping_all_cardinalities()

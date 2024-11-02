@@ -1,5 +1,7 @@
 from typing import List
 
+from models.mongodb.cardinalities import Cardinalities
+from models.mongodb.collection import Collection
 from models.rdbms.attribute import Attribute
 from models.rdbms.rdbms import Rdbms
 from models.rdbms.relation import Relation
@@ -22,10 +24,10 @@ class PostgreSQL(Rdbms):
     engine: str = "postgresql"
     relations: List[Relation] = []
 
-    def process_collection(cls):
+    def process_collection(cls, collection: Collection):
         pass
 
-    def process_mapping_cardinalities(cls):
+    def process_mapping_cardinalities(cls, cardinalities: List[Cardinalities]):
         pass
 
     def data_type_mapping(cls, mongo_type: MongoType) -> PsqlType:
