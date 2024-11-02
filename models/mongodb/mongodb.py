@@ -700,18 +700,6 @@ class MongoDB(BaseModel):
                     elif cls.check_shortest_candidate_key(candidate_key) == f:
                         return f
 
-    # TODO: Mapping Cardinalities
-
-    # mapping caridanilities by data type of the fields
-    # do the traverse by primary key
-    # check the primary key -> klo exist di collection lain, cek lagi, apakah di collection itu dia refer collection yang pertama
-    # klo iya maka many to many
-
-    # object -> one-to-one
-    # array of object -> one-to-many
-    # name of a collection appear in other collection and the name of second collection
-    # also appear in the first collection -> many-to-many
-
     def mapping_cardinalities(cls, coll_name: str) -> str:
 
         res = []
