@@ -1,15 +1,49 @@
-import json
 from typing import List
 
 from models.rdbms.attribute import Attribute
 from models.rdbms.rdbms import Rdbms
 from models.rdbms.relation import Relation
+from models.type import MongoType, PsqlType
+
+MONGO_TO_PSQL_TYPE = {
+    'boolean': 'BOOLEAN',
+    'integer': 'INT',
+    'biginteger': 'BIGINT',
+    'float': 'REAL',
+    'number': 'DOUBLE PRECISION',
+    'date': 'TIMESTAMP',
+    'string': 'TEXT',
+    'oid': 'TEXT',
+    'dbref': 'TEXT'
+}
 
 
 class MySQL(Rdbms):
     engine: str = "mysql"
-    relations: List[Relation]
+    relations: List[Relation] = []
 
+    def process_collection(cls):
+        pass
+
+    def process_mapping_cardinalities(cls):
+        pass
+
+    def data_type_mapping(cls, mongo_type: MongoType) -> PsqlType:
+
+        mapping = {
+            MongoType.NULL: PsqlType.NULL,
+            MongoType.BOOL: PsqlType.BOOL,
+            MongoType.INTEGER: PsqlType.INTEGER,
+            MongoType.BIG_INT: PsqlType.BIG_INT,
+            MongoType.FLOAT: PsqlType.FLOAT,
+            MongoType.NUM: PsqlType.NUM,
+            MongoType.DATE: PsqlType.DATE,
+            MongoType.STRING: PsqlType.STRING,
+            MongoType.OID: PsqlType.OID,
+            MongoType.DB_REF: PsqlType.DB_REF,
+        }
+
+        return mapping.get(mongo_type)
 
     def generate_ddl(cls) -> str:
         ddl_statements = []
@@ -24,13 +58,12 @@ class MySQL(Rdbms):
                 tables_without_fk[table_name] = attributes
 
         for table_name, attributes in tables_without_fk.items():
-            ddl_statements.append(create_table_ddl(table_name, attributes))
+            ddl_statements.append(cls.create_table_ddl(table_name, attributes))
 
         for table_name, attributes in tables_with_fk.items():
-            ddl_statements.append(create_table_ddl(table_name, attributes))
+            ddl_statements.append(cls.create_table_ddl(table_name, attributes))
 
         return "\n\n".join(ddl_statements)
-
 
     def create_table_ddl(cls, table: Relation, attributes: Attribute) -> str:
         columns = []
@@ -48,8 +81,7 @@ class MySQL(Rdbms):
                 if column == "_id":
                     primary_key = column
                     unique_columns.append(column)
-                elif (data_type == 'oid' and
-                        column not in attributes.get("foreign_keys", {})):
+                elif (data_type == 'oid' and column not in attributes.get("foreign_keys", {})):
                     unique_columns.append(column)
             else:
                 raise ValueError(f"Unsupported data type: {data_type}")
@@ -62,7 +94,7 @@ class MySQL(Rdbms):
                 REFERENCES {ref_table} ({ref_column})'''
             )
 
-        table_definition = f"CREATE TABLE {table_name} (\n"
+        table_definition = f"CREATE TABLE {Relation.name} (\n"
         table_definition += ",\n".join(columns)
 
         if primary_key:

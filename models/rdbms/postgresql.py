@@ -3,6 +3,7 @@ from typing import List
 from models.rdbms.attribute import Attribute
 from models.rdbms.rdbms import Rdbms
 from models.rdbms.relation import Relation
+from models.type import MongoType, PsqlType
 
 MONGO_TO_PSQL_TYPE = {
     'boolean': 'BOOLEAN',
@@ -20,6 +21,29 @@ MONGO_TO_PSQL_TYPE = {
 class PostgreSQL(Rdbms):
     engine: str = "postgresql"
     relations: List[Relation] = []
+
+    def process_collection(cls):
+        pass
+
+    def process_mapping_cardinalities(cls):
+        pass
+
+    def data_type_mapping(cls, mongo_type: MongoType) -> PsqlType:
+
+        mapping = {
+            MongoType.NULL: PsqlType.NULL,
+            MongoType.BOOL: PsqlType.BOOL,
+            MongoType.INTEGER: PsqlType.INTEGER,
+            MongoType.BIG_INT: PsqlType.BIG_INT,
+            MongoType.FLOAT: PsqlType.FLOAT,
+            MongoType.NUM: PsqlType.NUM,
+            MongoType.DATE: PsqlType.DATE,
+            MongoType.STRING: PsqlType.STRING,
+            MongoType.OID: PsqlType.OID,
+            MongoType.DB_REF: PsqlType.DB_REF,
+        }
+
+        return mapping.get(mongo_type)
 
     def generate_ddl(cls) -> str:
         ddl_statements = []

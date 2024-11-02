@@ -23,6 +23,7 @@ class MongoType(str, Enum):
 
 
 class PsqlType(str, Enum):
+    NULL = "NULL"
     BOOL = "BOOLEAN"
     INTEGER = "INT"
     BIG_INT = "BIGINT"
