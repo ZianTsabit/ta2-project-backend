@@ -3,7 +3,7 @@ from typing import List
 from models.rdbms.attribute import Attribute
 from models.rdbms.rdbms import Rdbms
 from models.rdbms.relation import Relation
-from models.type import MongoType, PsqlType
+from models.type import MongoType, MysqlType
 
 MONGO_TO_PSQL_TYPE = {
     'boolean': 'BOOLEAN',
@@ -28,19 +28,19 @@ class MySQL(Rdbms):
     def process_mapping_cardinalities(cls):
         pass
 
-    def data_type_mapping(cls, mongo_type: MongoType) -> PsqlType:
+    def data_type_mapping(cls, mongo_type: MongoType) -> MysqlType:
 
         mapping = {
-            MongoType.NULL: PsqlType.NULL,
-            MongoType.BOOL: PsqlType.BOOL,
-            MongoType.INTEGER: PsqlType.INTEGER,
-            MongoType.BIG_INT: PsqlType.BIG_INT,
-            MongoType.FLOAT: PsqlType.FLOAT,
-            MongoType.NUM: PsqlType.NUM,
-            MongoType.DATE: PsqlType.DATE,
-            MongoType.STRING: PsqlType.STRING,
-            MongoType.OID: PsqlType.OID,
-            MongoType.DB_REF: PsqlType.DB_REF,
+            MongoType.NULL: MysqlType.NULL,
+            MongoType.BOOL: MysqlType.BOOL,
+            MongoType.INTEGER: MysqlType.INTEGER,
+            MongoType.BIG_INT: MysqlType.BIG_INT,
+            MongoType.FLOAT: MysqlType.FLOAT,
+            MongoType.NUM: MysqlType.NUM,
+            MongoType.DATE: MysqlType.DATE,
+            MongoType.STRING: MysqlType.STRING,
+            MongoType.OID: MysqlType.OID,
+            MongoType.DB_REF: MysqlType.DB_REF,
         }
 
         return mapping.get(mongo_type)

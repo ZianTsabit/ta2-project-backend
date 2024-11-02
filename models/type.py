@@ -35,6 +35,19 @@ class PsqlType(str, Enum):
     DB_REF = "TEXT"
 
 
+class MySQLType(str, Enum):
+    NULL = "NULL"
+    BOOL = "BOOLEAN"
+    INTEGER = "INT"
+    BIG_INT = "BIGINT"
+    FLOAT = "FLOAT"
+    NUM = "DOUBLE"
+    DATE = "DATETIME"
+    STRING = "TEXT"
+    OID = "TEXT"
+    DB_REF = "TEXT"
+
+
 class CardinalitiesType(str, Enum):
     ONE_TO_ONE = "one-to-one"
     ONE_TO_MANY = "one-to-many"
