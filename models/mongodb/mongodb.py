@@ -916,3 +916,38 @@ class MongoDB(BaseModel):
 
     def get_collections(cls):
         return cls.collections
+
+    def display_schema(cls):
+
+        client = cls.create_client()
+        db = client[cls.db]
+        collections = db.list_collection_names()
+        final_schema = {}
+
+        for coll in collections:
+            schema = extract_pymongo_client_schema(client, cls.db, coll)
+            object_data = schema[cls.db][coll]["object"]
+
+            final_schema[coll] = object_data
+
+        client.close()
+
+        summary = {}
+
+        for coll in collections:
+            summary[coll] = {}
+            for key, value in final_schema[coll].items():
+
+                if 'array_type' in value:
+                    if value['array_type'] == 'OBJECT':
+                        nested_object_summary = {sub_key: sub_value['type'] for sub_key, sub_value in value['object'].items()}
+                        summary[coll][key] = [nested_object_summary]
+                    else:
+                        summary[coll][key] = [value['array_type']]
+
+                elif 'object' in value:
+                    summary[coll][key] = {sub_key: sub_value['type'] for sub_key, sub_value in value['object'].items()}
+                else:
+                    summary[coll][key] = value['type']
+
+        return summary
