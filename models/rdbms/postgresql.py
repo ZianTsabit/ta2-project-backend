@@ -1,4 +1,3 @@
-import json
 from typing import Dict, List
 
 from models.mongodb.cardinalities import Cardinalities
@@ -25,7 +24,7 @@ class PostgreSQL(Rdbms):
     engine: str = "postgresql"
     relations: Dict = {}
 
-    def process_collection(cls, collections: dict):
+    def process_collection(cls, mongo: MongoDB, collections: dict):
 
         collection_names = list(collections.keys())
 
@@ -64,7 +63,7 @@ class PostgreSQL(Rdbms):
 
                 cls.relations[new_rel.name] = new_rel
 
-    def process_mapping_cardinalities(cls, cardinalities: List[Cardinalities]):
+    def process_mapping_cardinalities(cls, mongo: MongoDB, collections: dict, cardinalities: List[Cardinalities]):
 
         res = {}
 
@@ -411,36 +410,3 @@ class PostgreSQL(Rdbms):
         table_definition += "\n);"
 
         return table_definition
-
-
-mongo = MongoDB(
-    host='localhost',
-    port=27017,
-    db='db_univ_2',
-    username='root',
-    password='rootadmin1234'
-)
-
-psql = PostgreSQL(
-    host='localhost',
-    port='5436',
-    db='db_school',
-    username='user',
-    password='admin#1234'
-)
-
-mongo.init_collection()
-
-collections = mongo.get_collections()
-
-with open("collections.json", "w") as file:
-    json.dump(mongo.dict(), file)
-
-cardinalities = mongo.mapping_all_cardinalities()
-
-psql.process_mapping_cardinalities(cardinalities)
-
-data_dict = {k: v.to_dict() for k, v in psql.relations.items()}
-
-with open("relations.json", "w") as file:
-    json.dump(data_dict, file)
