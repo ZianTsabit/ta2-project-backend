@@ -19,6 +19,5 @@ class Relation(BaseModel):
             "foreign_key": cls.foreign_key.to_dict() if cls.foreign_key else None
         }
 
-# TODO: if primary key not found, add default id with auto generate or autoincrement and the data type is int
 # TODO: when generate ddl please process relation that has no foreign key first
 # TODO: when the relation is many-to-many please create one relation

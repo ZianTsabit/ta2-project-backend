@@ -153,6 +153,7 @@ for c in cardinalities:
 
     dest_coll = cardinality["destination"]
     dest = collections[dest_coll]
+
     cardinality_type = cardinality["type"]
 
     source_rel = Relation(
