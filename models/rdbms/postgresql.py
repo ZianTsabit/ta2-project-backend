@@ -304,8 +304,8 @@ for c in cardinalities:
 
     # TODO: check duplicate name relation
 
-    # res[source_rel.name] = source_rel
-    # res[dest_rel.name] = dest_rel
+    res[source_rel.name] = source_rel
+    res[dest_rel.name] = dest_rel
 
 postgresql.relations = res
 
