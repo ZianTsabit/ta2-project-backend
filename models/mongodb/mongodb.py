@@ -898,3 +898,6 @@ class MongoDB(BaseModel):
                     res.append(card)
 
         return res
+
+    def get_collections(cls):
+        return cls.collections

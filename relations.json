@@ -1,0 +1,79 @@
+{
+    "students": {
+        "name": "students",
+        "attributes": [
+            {
+                "name": "_id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "name",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "address",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": false
+            }
+        ],
+        "primary_key": {
+            "name": "_id",
+            "data_type": "TEXT",
+            "not_null": true,
+            "unique": true
+        },
+        "foreign_key": null
+    },
+    "courses": {
+        "name": "courses",
+        "attributes": [
+            {
+                "name": "label",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": false
+            },
+            {
+                "name": "nbr_hours",
+                "data_type": "INT",
+                "not_null": false,
+                "unique": false
+            },
+            {
+                "name": "level",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": false
+            },
+            {
+                "name": "id",
+                "data_type": "SERIAL",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "students._id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            }
+        ],
+        "primary_key": {
+            "name": "id",
+            "data_type": "SERIAL",
+            "not_null": true,
+            "unique": true
+        },
+        "foreign_key": {
+            "name": "students._id",
+            "data_type": "TEXT",
+            "not_null": true,
+            "unique": true
+        }
+    }
+}

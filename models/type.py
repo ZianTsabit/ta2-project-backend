@@ -24,6 +24,7 @@ class MongoType(str, Enum):
 
 class PsqlType(str, Enum):
     NULL = "NULL"
+    SERIAL = "SERIAL"
     BOOL = "BOOLEAN"
     INTEGER = "INT"
     BIG_INT = "BIGINT"
@@ -37,6 +38,7 @@ class PsqlType(str, Enum):
 
 class MySQLType(str, Enum):
     NULL = "NULL"
+    SERIAL = "INT AUTO_INCREMENT"
     BOOL = "BOOLEAN"
     INTEGER = "INT"
     BIG_INT = "BIGINT"

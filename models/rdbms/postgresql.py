@@ -1,11 +1,13 @@
-from typing import List
+import json
+from typing import Dict, List
 
 from models.mongodb.cardinalities import Cardinalities
 from models.mongodb.collection import Collection
+from models.mongodb.mongodb import MongoDB
 from models.rdbms.attribute import Attribute
 from models.rdbms.rdbms import Rdbms
 from models.rdbms.relation import Relation
-from models.type import MongoType, PsqlType
+from models.type import CardinalitiesType, MongoType, PsqlType
 
 MONGO_TO_PSQL_TYPE = {
     'boolean': 'BOOLEAN',
@@ -22,7 +24,7 @@ MONGO_TO_PSQL_TYPE = {
 
 class PostgreSQL(Rdbms):
     engine: str = "postgresql"
-    relations: List[Relation] = []
+    relations: Dict = {}
 
     def process_collection(cls, collection: Collection):
         # TODO: add relation that not exist in cardinalities to cls.relations
@@ -116,3 +118,131 @@ class PostgreSQL(Rdbms):
         table_definition += "\n);"
 
         return table_definition
+
+
+mongo = MongoDB(
+    host='localhost',
+    port=27017,
+    db='db_school',
+    username='root',
+    password='rootadmin1234'
+)
+
+postgresql = PostgreSQL(
+    host='localhost',
+    port='5436',
+    db='db_univ',
+    username='user',
+    password='admin#1234'
+)
+
+mongo.init_collection()
+
+collections = mongo.get_collections()
+
+cardinalities = mongo.mapping_all_cardinalities()
+
+res = {}
+
+for c in cardinalities:
+
+    cardinality = c.dict()
+
+    source_coll = cardinality["source"]
+    source = collections[source_coll]
+
+    dest_coll = cardinality["destination"]
+    dest = collections[dest_coll]
+    cardinality_type = cardinality["type"]
+
+    source_rel = Relation(
+        name=source_coll
+    )
+
+    dest_rel = Relation(
+        name=dest_coll
+    )
+
+    if cardinality_type == CardinalitiesType.ONE_TO_ONE:
+        pass
+
+    elif cardinality_type == CardinalitiesType.ONE_TO_MANY:
+
+        primary_key_source = mongo.get_primary_key(source_coll)
+
+        for f in source:
+
+            if f.name != dest_coll:
+
+                attr = Attribute(
+                    name=f.name,
+                    data_type=postgresql.data_type_mapping(f.data_type),
+                    not_null=f.not_null,
+                    unique=f.unique
+                )
+
+                if primary_key_source is not None and attr.name == primary_key_source:
+                    source_rel.primary_key = attr
+
+                source_rel.attributes.append(attr)
+
+        if primary_key_source is None:
+            primary_key_attr = Attribute(
+                name="id",
+                data_type=PsqlType.SERIAL,
+                not_null=True,
+                unique=True
+            )
+            source_rel.primary_key = primary_key_attr
+            source_rel.attributes.append(primary_key_attr)
+
+        primary_key_dest = mongo.get_primary_key(dest_coll)
+
+        for f in dest:
+            attr = Attribute(
+                name=f.name,
+                data_type=postgresql.data_type_mapping(f.data_type),
+                not_null=f.not_null,
+                unique=f.unique
+            )
+
+            if primary_key_dest is not None and attr.name == primary_key_dest:
+                dest_rel.primary_key = attr
+
+            dest_rel.attributes.append(attr)
+
+        if primary_key_dest is None:
+            primary_key_attr = Attribute(
+                name="id",
+                data_type=PsqlType.SERIAL,
+                not_null=True,
+                unique=True
+            )
+            dest_rel.primary_key = primary_key_attr
+            dest_rel.attributes.append(primary_key_attr)
+
+        foreign_key = Attribute(
+            name=f'{source_coll}.{source_rel.primary_key.name}',
+            data_type=source_rel.primary_key.data_type,
+            not_null=source_rel.primary_key.not_null,
+            unique=source_rel.primary_key.unique
+        )
+
+        dest_rel.attributes.append(foreign_key)
+
+        dest_rel.foreign_key = foreign_key
+
+    elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
+        pass
+
+    # TODO: check duplicate name relation
+
+    res[source_rel.name] = source_rel
+    res[dest_rel.name] = dest_rel
+
+postgresql.relations = res
+
+data_dict = {k: v.to_dict() for k, v in postgresql.relations.items()}
+
+with open("relations.json", "w") as file:
+    json.dump(data_dict, file)
