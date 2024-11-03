@@ -123,7 +123,7 @@ class PostgreSQL(Rdbms):
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_school',
+    db='db_univ',
     username='root',
     password='rootadmin1234'
 )
@@ -165,7 +165,73 @@ for c in cardinalities:
     )
 
     if cardinality_type == CardinalitiesType.ONE_TO_ONE:
-        pass
+
+        primary_key_source = mongo.get_primary_key(source_coll)
+
+        for f in source:
+
+            if f.name != dest_coll:
+
+                attr = Attribute(
+                    name=f.name,
+                    data_type=postgresql.data_type_mapping(f.data_type),
+                    not_null=f.not_null,
+                    unique=f.unique
+                )
+
+                if primary_key_source is not None and attr.name == primary_key_source:
+
+                    source_rel.primary_key = attr
+
+                source_rel.attributes.append(attr)
+
+        if primary_key_source is None:
+            primary_key_attr = Attribute(
+                name="id",
+                data_type=PsqlType.SERIAL,
+                not_null=True,
+                unique=True
+            )
+            source_rel.primary_key = primary_key_attr
+            source_rel.attributes.append(primary_key_attr)
+
+        primary_key_dest = mongo.get_primary_key(dest_coll)
+
+        check_key_source = mongo.check_key_in_other_collection(source_rel.primary_key.name, source_coll)
+
+        for f in dest:
+            attr = Attribute(
+                name=f.name,
+                data_type=postgresql.data_type_mapping(f.data_type),
+                not_null=f.not_null,
+                unique=f.unique
+            )
+
+            if primary_key_dest is not None and attr.name == primary_key_dest:
+                dest_rel.primary_key = attr
+
+            if check_key_source["status"] is True and check_key_source["field"] == attr.name:
+
+                foreign_key_attr = Attribute(
+                    name=f'{source_coll}.{attr.name}',
+                    data_type=attr.data_type,
+                    not_null=attr.not_null,
+                    unique=attr.unique
+                )
+
+                dest_rel.foreign_key = foreign_key_attr
+
+            dest_rel.attributes.append(attr)
+
+        if primary_key_dest is None:
+            primary_key_attr = Attribute(
+                name="id",
+                data_type=PsqlType.SERIAL,
+                not_null=True,
+                unique=True
+            )
+            dest_rel.primary_key = primary_key_attr
+            dest_rel.attributes.append(primary_key_attr)
 
     elif cardinality_type == CardinalitiesType.ONE_TO_MANY:
 
@@ -238,8 +304,8 @@ for c in cardinalities:
 
     # TODO: check duplicate name relation
 
-    res[source_rel.name] = source_rel
-    res[dest_rel.name] = dest_rel
+    # res[source_rel.name] = source_rel
+    # res[dest_rel.name] = dest_rel
 
 postgresql.relations = res
 
