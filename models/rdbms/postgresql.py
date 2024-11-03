@@ -123,7 +123,7 @@ class PostgreSQL(Rdbms):
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_univ',
+    db='db_school_2',
     username='root',
     password='rootadmin1234'
 )
@@ -131,7 +131,7 @@ mongo = MongoDB(
 postgresql = PostgreSQL(
     host='localhost',
     port='5436',
-    db='db_univ',
+    db='db_school',
     username='user',
     password='admin#1234'
 )
@@ -355,9 +355,9 @@ for c in cardinalities:
             dest_rel.attributes.append(primary_key_attr)
 
         new_relation = Relation(
-            name=f"{source_coll}.{dest_coll}"
+            name=f"{source_coll}_{dest_coll}"
         )
-        new_relation.relations.append(
+        new_relation.attributes.append(
             Attribute(
                 name=f"{source_rel.name}.{source_rel.primary_key.name}",
                 data_type=source_rel.primary_key.data_type,
@@ -366,7 +366,7 @@ for c in cardinalities:
             )
         )
 
-        new_relation.relations.append(
+        new_relation.attributes.append(
             Attribute(
                 name=f"{dest_rel.name}.{dest_rel.primary_key.name}",
                 data_type=dest_rel.primary_key.data_type,
@@ -382,8 +382,10 @@ for c in cardinalities:
             unique=True
         )
 
-        for attr in new_relation.relations:
+        for attr in new_relation.attributes:
             new_relation.foreign_key.append(attr)
+
+        res[new_relation.name] = new_relation
 
     # TODO: check duplicate name relation
 
