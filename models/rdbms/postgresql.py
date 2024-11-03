@@ -49,7 +49,13 @@ class PostgreSQL(Rdbms):
             MongoType.DB_REF: PsqlType.DB_REF,
         }
 
-        return mapping.get(mongo_type)
+        if mongo_type in mapping:
+            return mapping.get(mongo_type)
+
+        return None
+
+    def is_valid_data_type(value: str) -> bool:
+        return value in PsqlType._value2member_map_
 
     def generate_ddl(cls) -> str:
         ddl_statements = []
@@ -123,7 +129,7 @@ class PostgreSQL(Rdbms):
 mongo = MongoDB(
     host='localhost',
     port=27017,
-    db='db_school_2',
+    db='db_univ_2',
     username='root',
     password='rootadmin1234'
 )
@@ -139,6 +145,9 @@ postgresql = PostgreSQL(
 mongo.init_collection()
 
 collections = mongo.get_collections()
+
+with open("collections.json", "w") as file:
+    json.dump(mongo.dict(), file)
 
 cardinalities = mongo.mapping_all_cardinalities()
 
@@ -239,7 +248,8 @@ for c in cardinalities:
 
         for f in source:
 
-            if f.name != dest_coll:
+            psql_data_type = postgresql.data_type_mapping(f.data_type)
+            if f.name != dest_coll and psql_data_type is not None:
 
                 attr = Attribute(
                     name=f.name,
@@ -266,17 +276,21 @@ for c in cardinalities:
         primary_key_dest = mongo.get_primary_key(dest_coll)
 
         for f in dest:
-            attr = Attribute(
-                name=f.name,
-                data_type=postgresql.data_type_mapping(f.data_type),
-                not_null=f.not_null,
-                unique=f.unique
-            )
 
-            if primary_key_dest is not None and attr.name == primary_key_dest:
-                dest_rel.primary_key = attr
+            psql_data_type = postgresql.data_type_mapping(f.data_type)
+            if f.name != source_coll and psql_data_type is not None:
 
-            dest_rel.attributes.append(attr)
+                attr = Attribute(
+                    name=f.name,
+                    data_type=postgresql.data_type_mapping(f.data_type),
+                    not_null=f.not_null,
+                    unique=f.unique
+                )
+
+                if primary_key_dest is not None and attr.name == primary_key_dest:
+                    dest_rel.primary_key = attr
+
+                dest_rel.attributes.append(attr)
 
         if primary_key_dest is None:
             primary_key_attr = Attribute(
@@ -304,8 +318,8 @@ for c in cardinalities:
         primary_key_source = mongo.get_primary_key(source_coll)
 
         for f in source:
-
-            if f.name != dest_coll:
+            psql_data_type = postgresql.data_type_mapping(f.data_type)
+            if f.name != dest_coll and psql_data_type is not None:
 
                 attr = Attribute(
                     name=f.name,
@@ -332,17 +346,20 @@ for c in cardinalities:
         primary_key_dest = mongo.get_primary_key(dest_coll)
 
         for f in dest:
-            attr = Attribute(
-                name=f.name,
-                data_type=postgresql.data_type_mapping(f.data_type),
-                not_null=f.not_null,
-                unique=f.unique
-            )
+            psql_data_type = postgresql.data_type_mapping(f.data_type)
+            if f.name != source_coll and psql_data_type is not None:
 
-            if primary_key_dest is not None and attr.name == primary_key_dest:
-                dest_rel.primary_key = attr
+                attr = Attribute(
+                    name=f.name,
+                    data_type=postgresql.data_type_mapping(f.data_type),
+                    not_null=f.not_null,
+                    unique=f.unique
+                )
 
-            dest_rel.attributes.append(attr)
+                if primary_key_dest is not None and attr.name == primary_key_dest:
+                    dest_rel.primary_key = attr
+
+                dest_rel.attributes.append(attr)
 
         if primary_key_dest is None:
             primary_key_attr = Attribute(
@@ -386,8 +403,6 @@ for c in cardinalities:
             new_relation.foreign_key.append(attr)
 
         res[new_relation.name] = new_relation
-
-    # TODO: check duplicate name relation
 
     res[source_rel.name] = source_rel
     res[dest_rel.name] = dest_rel

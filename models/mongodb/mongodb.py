@@ -778,7 +778,7 @@ class MongoDB(BaseModel):
                                     res.append(cardinality)
 
                         elif f.data_type == MongoType.ARRAY_OF_STRING or f.data_type == MongoType.ARRAY_OF_BIG_INT or f.data_type == MongoType.ARRAY_OF_FLOAT or f.data_type == MongoType.ARRAY_OF_NUM or f.data_type == MongoType.ARRAY_OF_DATE or f.data_type == MongoType.ARRAY_OF_OID:
-
+                            # TODO: array check if there is a collection if unique -> one-to-many else many-to-many
                             cardinality = Cardinalities(
                                 source=coll,
                                 destination=coll_name,
@@ -791,7 +791,7 @@ class MongoDB(BaseModel):
         for f in cls.collections[coll_name]:
 
             if f.data_type == MongoType.ARRAY_OF_STRING or f.data_type == MongoType.ARRAY_OF_BIG_INT or f.data_type == MongoType.ARRAY_OF_FLOAT or f.data_type == MongoType.ARRAY_OF_NUM or f.data_type == MongoType.ARRAY_OF_DATE or f.data_type == MongoType.ARRAY_OF_OID:
-
+                # TODO: array check if there is a collection if unique -> one-to-many else many-to-many
                 cardinality = Cardinalities(
                     source=coll_name,
                     destination=f.name,
