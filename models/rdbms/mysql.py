@@ -5,7 +5,7 @@ from models.mongodb.collection import Collection
 from models.rdbms.attribute import Attribute
 from models.rdbms.rdbms import Rdbms
 from models.rdbms.relation import Relation
-from models.type import MongoType, MysqlType
+from models.type import MongoType, MySQLType
 
 MONGO_TO_PSQL_TYPE = {
     'boolean': 'BOOLEAN',
@@ -32,19 +32,19 @@ class MySQL(Rdbms):
         # TODO: add relation to cls.relations
         pass
 
-    def data_type_mapping(cls, mongo_type: MongoType) -> MysqlType:
+    def data_type_mapping(cls, mongo_type: MongoType) -> MySQLType:
 
         mapping = {
-            MongoType.NULL: MysqlType.NULL,
-            MongoType.BOOL: MysqlType.BOOL,
-            MongoType.INTEGER: MysqlType.INTEGER,
-            MongoType.BIG_INT: MysqlType.BIG_INT,
-            MongoType.FLOAT: MysqlType.FLOAT,
-            MongoType.NUM: MysqlType.NUM,
-            MongoType.DATE: MysqlType.DATE,
-            MongoType.STRING: MysqlType.STRING,
-            MongoType.OID: MysqlType.OID,
-            MongoType.DB_REF: MysqlType.DB_REF,
+            MongoType.NULL: MySQLType.NULL,
+            MongoType.BOOL: MySQLType.BOOL,
+            MongoType.INTEGER: MySQLType.INTEGER,
+            MongoType.BIG_INT: MySQLType.BIG_INT,
+            MongoType.FLOAT: MySQLType.FLOAT,
+            MongoType.NUM: MySQLType.NUM,
+            MongoType.DATE: MySQLType.DATE,
+            MongoType.STRING: MySQLType.STRING,
+            MongoType.OID: MySQLType.OID,
+            MongoType.DB_REF: MySQLType.DB_REF,
         }
 
         return mapping.get(mongo_type)

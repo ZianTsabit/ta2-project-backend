@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
@@ -40,4 +40,21 @@ async def test_connection(mongodb: MongoDB):
                 "message": "connection failed"
             },
             status_code=status.HTTP_200_OK
+        )
+
+
+@router.post("/display-schema")
+async def display_schema(mongodb: MongoDB):
+
+    schema = mongodb.display_schema()
+
+    if schema:
+        return JSONResponse(
+            content=jsonable_encoder(schema),
+            status_code=status.HTTP_200_OK
+        )
+
+    else:
+        return Response(
+            status_code=status.HTTP_204_NO_CONTENT
         )
