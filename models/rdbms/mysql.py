@@ -18,7 +18,7 @@ class MySQL(Rdbms):
 
         for coll in collection_names:
 
-            if coll not in cls.relations():
+            if coll not in cls.relations:
 
                 new_rel = Relation(
                     name=coll
