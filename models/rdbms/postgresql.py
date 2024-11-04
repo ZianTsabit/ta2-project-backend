@@ -7,18 +7,6 @@ from models.rdbms.rdbms import Rdbms
 from models.rdbms.relation import Relation
 from models.type import CardinalitiesType, MongoType, PsqlType
 
-MONGO_TO_PSQL_TYPE = {
-    'boolean': 'BOOLEAN',
-    'integer': 'INT',
-    'biginteger': 'BIGINT',
-    'float': 'REAL',
-    'number': 'DOUBLE PRECISION',
-    'date': 'TIMESTAMP',
-    'string': 'TEXT',
-    'oid': 'TEXT',
-    'dbref': 'TEXT'
-}
-
 
 class PostgreSQL(Rdbms):
     engine: str = "postgresql"
@@ -343,70 +331,44 @@ class PostgreSQL(Rdbms):
 
         return None
 
-    def generate_ddl(cls) -> str:
+    def generate_ddl(cls, schema):
+
         ddl_statements = []
+        foreign_key_statements = []
 
-        tables_with_fk = {}
-        tables_without_fk = {}
-
-        for table_name, attributes in cls.relations.items():
-            if "foreign_keys" in attributes and attributes["foreign_keys"]:
-                tables_with_fk[table_name] = attributes
+        for table_name, table in schema.items():
+            if not table["foreign_key"]:
+                ddl_statements.append(cls.create_table_ddl(table))
             else:
-                tables_without_fk[table_name] = attributes
+                foreign_key_statements.append(cls.create_table_ddl(table))
 
-        for table_name, attributes in tables_without_fk.items():
-            ddl_statements.append(cls.create_table_ddl(table_name, attributes))
-
-        for table_name, attributes in tables_with_fk.items():
-            ddl_statements.append(cls.create_table_ddl(table_name, attributes))
+        ddl_statements.extend(foreign_key_statements)
 
         return "\n\n".join(ddl_statements)
 
-    def create_table_ddl(cls, table: Relation, attributes: Attribute) -> str:
+    def create_table_ddl(cls, table: dict):
+
+        ddl = f'CREATE TABLE {table["name"]} (\n'
+
         columns = []
-        primary_key = None
-        unique_columns = []
-        foreign_keys = []
+        for attr in table["attributes"]:
+            column_line = f'    {attr["name"]} {attr["data_type"]}'
+            if attr["not_null"]:
+                column_line += " NOT NULL"
+            if attr["unique"]:
+                column_line += " UNIQUE"
+            columns.append(column_line)
 
-        for column, data_type in attributes.items():
-            if column == "foreign_keys":
-                continue
-            if data_type in MONGO_TO_PSQL_TYPE:
-                column_definition = f"{column} {MONGO_TO_PSQL_TYPE[data_type]}"
-                columns.append(column_definition)
-
-                if column == "_id":
-                    primary_key = column
-                    unique_columns.append(column)
-                elif (data_type == 'oid' and column not in attributes.get("foreign_keys", {})):
-                    unique_columns.append(column)
-
-            else:
-                raise ValueError(f"Unsupported data type: {data_type}")
-
-        foreign_keys_attributes = attributes.get("foreign_keys", {})
-        for fk_column, ref in foreign_keys_attributes.items():
-            ref_table, ref_column = ref.split(".")
-            foreign_keys.append(
-                f'''FOREIGN KEY ({fk_column})
-                REFERENCES {ref_table} ({ref_column})'''
-            )
-
-        table_definition = f"CREATE TABLE {table} (\n"
-        table_definition += ",\n".join(columns)
-
+        primary_key = table.get("primary_key")
         if primary_key:
-            table_definition += f",\nPRIMARY KEY ({primary_key})"
+            pk_cols = primary_key["name"]
+            columns.append(f'    PRIMARY KEY ({pk_cols})')
 
-        if unique_columns:
-            unique_constraints = ", ".join(unique_columns)
-            table_definition += f",\nUNIQUE ({unique_constraints})"
+        ddl += ",\n".join(columns) + "\n"
+        ddl += ");"
 
-        if foreign_keys:
-            table_definition += ",\n"
-            table_definition += ",\n".join(foreign_keys)
+        for fk in table.get("foreign_key", []):
+            ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].replace(".", "_")}\n'
+            ddl += f'    FOREIGN KEY ({fk["name"]}) REFERENCES {fk["name"].split(".")[0]}(_id);'
 
-        table_definition += "\n);"
-
-        return table_definition
+        return ddl

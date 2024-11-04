@@ -20,4 +20,3 @@ class Relation(BaseModel):
         }
 
 # TODO: when generate ddl please process relation that has no foreign key first
-# TODO: when the relation is many-to-many please create one relation
