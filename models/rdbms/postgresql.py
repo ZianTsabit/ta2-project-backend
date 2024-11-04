@@ -348,6 +348,8 @@ class PostgreSQL(Rdbms):
 
     def create_table_ddl(cls, table: dict):
 
+        relations = cls.relations
+
         ddl = f'CREATE TABLE {table["name"]} (\n'
 
         columns = []
@@ -368,7 +370,38 @@ class PostgreSQL(Rdbms):
         ddl += ");"
 
         for fk in table.get("foreign_key", []):
+
             ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].replace(".", "_")}\n'
-            ddl += f'    FOREIGN KEY ({fk["name"]}) REFERENCES {fk["name"].split(".")[0]}(_id);'
+            ddl += f'    FOREIGN KEY ({fk["name"]}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
 
         return ddl
+
+
+mongodb = MongoDB(
+    host='localhost',
+    port=27018,
+    db='db_univ',
+    username='root',
+    password='rootadmin1234'
+)
+
+postgresql = PostgreSQL(
+    host='localhost',
+    port=5436,
+    db='db_univ',
+    username='user',
+    password='admin#1234'
+)
+
+mongodb.init_collection()
+collections = mongodb.get_collections()
+cardinalities = mongodb.mapping_all_cardinalities()
+
+postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
+postgresql.process_collection(mongodb, collections)
+
+schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
+
+ddl = postgresql.generate_ddl(schema)
+
+print(ddl)
