@@ -278,7 +278,7 @@ class PostgreSQL(Rdbms):
                 )
                 new_relation.attributes.append(
                     Attribute(
-                        name=f"{source_rel.name}.{source_rel.primary_key.name}",
+                        name=f"{source_rel.name}_{source_rel.primary_key.name}",
                         data_type=source_rel.primary_key.data_type,
                         not_null=source_rel.primary_key.not_null,
                         unique=source_rel.primary_key.unique
@@ -287,7 +287,7 @@ class PostgreSQL(Rdbms):
 
                 new_relation.attributes.append(
                     Attribute(
-                        name=f"{dest_rel.name}.{dest_rel.primary_key.name}",
+                        name=f"{dest_rel.name}_{dest_rel.primary_key.name}",
                         data_type=dest_rel.primary_key.data_type,
                         not_null=dest_rel.primary_key.not_null,
                         unique=dest_rel.primary_key.unique
@@ -295,7 +295,7 @@ class PostgreSQL(Rdbms):
                 )
 
                 new_relation.primary_key = Attribute(
-                    name=f"{source_rel.name}.{source_rel.primary_key.name}, {dest_rel.name}.{dest_rel.primary_key.name}",
+                    name=f"{source_rel.name}_{source_rel.primary_key.name}, {dest_rel.name}_{dest_rel.primary_key.name}",
                     data_type=PsqlType.NULL,
                     not_null=True,
                     unique=True
@@ -372,7 +372,7 @@ class PostgreSQL(Rdbms):
         for fk in table.get("foreign_key", []):
 
             ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].replace(".", "_")}\n'
-            ddl += f'    FOREIGN KEY ({fk["name"]}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
+            ddl += f'    FOREIGN KEY ({fk["name"].split(".")[1]}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
 
         return ddl
 
