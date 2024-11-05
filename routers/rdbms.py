@@ -3,8 +3,8 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from models.mongodb.mongodb import MongoDB
-from models.rdbms.mysql import MySQL
-from models.rdbms.postgresql import PostgreSQL
+from models.mysql.mysql import MySQL
+from models.postgresql.postgresql import PostgreSQL
 from models.rdbms.rdbms import Rdbms
 
 router = APIRouter(
