@@ -63,7 +63,10 @@ class MySQL(Rdbms):
             source = collections[source_coll]
 
             dest_coll = cardinality["destination"]
-            dest = collections[dest_coll]
+
+            dest = None
+            if dest_coll in collections:
+                dest = collections[dest_coll]
 
             cardinality_type = cardinality["type"]
 
@@ -148,23 +151,6 @@ class MySQL(Rdbms):
 
                 primary_key_source = mongo.get_primary_key(source_coll)
 
-                for f in source:
-
-                    psql_data_type = cls.data_type_mapping(f.data_type)
-                    if f.name != dest_coll and psql_data_type is not None:
-
-                        attr = Attribute(
-                            name=f.name,
-                            data_type=cls.data_type_mapping(f.data_type),
-                            not_null=f.not_null,
-                            unique=f.unique
-                        )
-
-                        if primary_key_source is not None and attr.name == primary_key_source:
-                            source_rel.primary_key = attr
-
-                        source_rel.attributes.append(attr)
-
                 if primary_key_source is None:
                     primary_key_attr = Attribute(
                         name="id",
@@ -175,52 +161,122 @@ class MySQL(Rdbms):
                     source_rel.primary_key = primary_key_attr
                     source_rel.attributes.append(primary_key_attr)
 
-                primary_key_dest = mongo.get_primary_key(dest_coll)
+                for f in source:
 
-                for f in dest:
+                    data_type = f.data_type
+                    psql_data_type = cls.data_type_mapping(data_type)
 
-                    psql_data_type = cls.data_type_mapping(f.data_type)
-                    if f.name != source_coll and psql_data_type is not None:
+                    if f.name != dest_coll and psql_data_type is not None:
 
                         attr = Attribute(
                             name=f.name,
-                            data_type=cls.data_type_mapping(f.data_type),
+                            data_type=psql_data_type,
                             not_null=f.not_null,
                             unique=f.unique
                         )
 
-                        if primary_key_dest is not None and attr.name == primary_key_dest:
-                            dest_rel.primary_key = attr
+                        if primary_key_source is not None and attr.name == primary_key_source:
+                            source_rel.primary_key = attr
 
-                        dest_rel.attributes.append(attr)
+                        source_rel.attributes.append(attr)
 
-                if primary_key_dest is None:
-                    primary_key_attr = Attribute(
-                        name="id",
-                        data_type=MySQLType.SERIAL,
-                        not_null=True,
-                        unique=True
+                    elif f.name == dest_coll and f.data_type.split(".")[0] == "array":
+
+                        dest_rel.attributes.append(
+                            Attribute(
+                                name=f"{source_rel.name}_{source_rel.primary_key.name}",
+                                data_type=source_rel.primary_key.data_type,
+                                not_null=source_rel.primary_key.not_null,
+                                unique=source_rel.primary_key.unique
+                            )
+                        )
+
+                        dest_rel.attributes.append(
+                            Attribute(
+                                name=f"{dest_rel.name}_value",
+                                data_type=cls.data_type_mapping(f.data_type.split(".")[1]),
+                                not_null=f.not_null,
+                                unique=f.unique
+                            )
+                        )
+
+                        dest_rel.primary_key = Attribute(
+                            name=f"{source_rel.name}_{source_rel.primary_key.name}, {dest_rel.name}_value",
+                            data_type=MySQLType.NULL,
+                            not_null=True,
+                            unique=True
+                        )
+
+                        dest_rel.foreign_key.append(
+                            Attribute(
+                                name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
+                                data_type=source_rel.primary_key.data_type,
+                                not_null=source_rel.primary_key.not_null,
+                                unique=source_rel.primary_key.unique
+                            )
+                        )
+
+                if dest is not None:
+
+                    primary_key_dest = mongo.get_primary_key(dest_coll)
+
+                    for f in dest:
+
+                        psql_data_type = cls.data_type_mapping(f.data_type)
+                        if f.name != source_coll and psql_data_type is not None:
+
+                            attr = Attribute(
+                                name=f.name,
+                                data_type=cls.data_type_mapping(f.data_type),
+                                not_null=f.not_null,
+                                unique=f.unique
+                            )
+
+                            if primary_key_dest is not None and attr.name == primary_key_dest:
+                                dest_rel.primary_key = attr
+
+                            dest_rel.attributes.append(attr)
+
+                    if primary_key_dest is None:
+                        primary_key_attr = Attribute(
+                            name="id",
+                            data_type=MySQLType.SERIAL,
+                            not_null=True,
+                            unique=True
+                        )
+                        dest_rel.primary_key = primary_key_attr
+                        dest_rel.attributes.append(primary_key_attr)
+
+                    foreign_key = Attribute(
+                        name=f'{source_coll}.{source_rel.primary_key.name}',
+                        data_type=source_rel.primary_key.data_type,
+                        not_null=source_rel.primary_key.not_null,
+                        unique=source_rel.primary_key.unique
                     )
-                    dest_rel.primary_key = primary_key_attr
-                    dest_rel.attributes.append(primary_key_attr)
 
-                foreign_key = Attribute(
-                    name=f'{source_coll}.{source_rel.primary_key.name}',
-                    data_type=source_rel.primary_key.data_type,
-                    not_null=source_rel.primary_key.not_null,
-                    unique=source_rel.primary_key.unique
-                )
+                    dest_rel.attributes.append(foreign_key)
 
-                dest_rel.attributes.append(foreign_key)
-
-                dest_rel.foreign_key.append(foreign_key)
+                    dest_rel.foreign_key.append(foreign_key)
 
             elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
 
                 primary_key_source = mongo.get_primary_key(source_coll)
 
                 for f in source:
+
                     psql_data_type = cls.data_type_mapping(f.data_type)
+
+                    if primary_key_source is None:
+                        primary_key_attr = Attribute(
+                            name="id",
+                            data_type=MySQLType.SERIAL,
+                            not_null=True,
+                            unique=True
+                        )
+
+                        source_rel.primary_key = primary_key_attr
+                        source_rel.attributes.append(primary_key_attr)
+
                     if f.name != dest_coll and psql_data_type is not None:
 
                         attr = Attribute(
@@ -235,47 +291,61 @@ class MySQL(Rdbms):
 
                         source_rel.attributes.append(attr)
 
-                if primary_key_source is None:
-                    primary_key_attr = Attribute(
-                        name="id",
-                        data_type=MySQLType.SERIAL,
-                        not_null=True,
-                        unique=True
-                    )
-                    source_rel.primary_key = primary_key_attr
-                    source_rel.attributes.append(primary_key_attr)
+                    elif f.name == dest_coll and f.data_type.split(".")[0] == "array":
 
-                primary_key_dest = mongo.get_primary_key(dest_coll)
-
-                for f in dest:
-                    psql_data_type = cls.data_type_mapping(f.data_type)
-                    if f.name != source_coll and psql_data_type is not None:
-
-                        attr = Attribute(
-                            name=f.name,
-                            data_type=cls.data_type_mapping(f.data_type),
-                            not_null=f.not_null,
-                            unique=f.unique
+                        dest_primary_key_attr = Attribute(
+                            name="id",
+                            data_type=MySQLType.SERIAL,
+                            not_null=True,
+                            unique=True
                         )
 
-                        if primary_key_dest is not None and attr.name == primary_key_dest:
-                            dest_rel.primary_key = attr
+                        dest_rel.primary_key = dest_primary_key_attr
+                        dest_rel.attributes.append(dest_primary_key_attr)
 
-                        dest_rel.attributes.append(attr)
+                        dest_rel.attributes.append(
+                            Attribute(
+                                name=f"{dest_rel.name}_value",
+                                data_type=cls.data_type_mapping(f.data_type.split(".")[1]),
+                                not_null=f.not_null,
+                                unique=f.unique
+                            )
+                        )
 
-                if primary_key_dest is None:
-                    primary_key_attr = Attribute(
-                        name="id",
-                        data_type=MySQLType.SERIAL,
-                        not_null=True,
-                        unique=True
-                    )
-                    dest_rel.primary_key = primary_key_attr
-                    dest_rel.attributes.append(primary_key_attr)
+                if dest is not None:
+
+                    primary_key_dest = mongo.get_primary_key(dest_coll)
+
+                    if primary_key_dest is None:
+                        primary_key_attr = Attribute(
+                            name="id",
+                            data_type=MySQLType.SERIAL,
+                            not_null=True,
+                            unique=True
+                        )
+                        dest_rel.primary_key = primary_key_attr
+                        dest_rel.attributes.append(primary_key_attr)
+
+                    for f in dest:
+                        psql_data_type = cls.data_type_mapping(f.data_type)
+                        if f.name != source_coll and psql_data_type is not None:
+
+                            attr = Attribute(
+                                name=f.name,
+                                data_type=cls.data_type_mapping(f.data_type),
+                                not_null=f.not_null,
+                                unique=f.unique
+                            )
+
+                            if primary_key_dest is not None and attr.name == primary_key_dest:
+                                dest_rel.primary_key = attr
+
+                            dest_rel.attributes.append(attr)
 
                 new_relation = Relation(
                     name=f"{source_coll}_{dest_coll}"
                 )
+
                 new_relation.attributes.append(
                     Attribute(
                         name=f"{source_rel.name}_{source_rel.primary_key.name}",
