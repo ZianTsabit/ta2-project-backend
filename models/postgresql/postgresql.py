@@ -14,7 +14,7 @@ class PostgreSQL(Rdbms):
 
     def create_engine_url(cls) -> str:
 
-        return f"postgresql://{cls.username}:{cls.password}@{cls.host}:{cls.port}/{cls.db}"
+        return f"postgresql+psycopg2://{cls.username}:{cls.password}@{cls.host}:{cls.port}/{cls.db}"
 
     def process_collection(cls, mongo: MongoDB, collections: dict):
 
