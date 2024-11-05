@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
@@ -134,7 +136,7 @@ async def implement_schema(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
         schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
 
         ddl = postgresql.generate_ddl(schema)
-
+        logging.info(ddl)
         if ddl != "":
             success = postgresql.execute_query(ddl)
 

@@ -1,4 +1,8 @@
+import logging
 from typing import Dict, List
+
+import psycopg2
+from psycopg2 import OperationalError
 
 from models.mongodb.cardinalities import Cardinalities
 from models.mongodb.mongodb import MongoDB
@@ -15,6 +19,49 @@ class PostgreSQL(Rdbms):
     def create_engine_url(cls) -> str:
 
         return f"postgresql+psycopg2://{cls.username}:{cls.password}@{cls.host}:{cls.port}/{cls.db}"
+
+    def create_connection(cls):
+        connection = psycopg2.connect(
+            host=cls.host,
+            port=cls.port,
+            database=cls.db,
+            user=cls.username,
+            password=cls.password
+        )
+
+        return connection
+
+    def test_connection(cls) -> bool:
+        connection = None
+        try:
+            connection = cls.create_connection()
+            cursor = connection.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
+            connection.close()
+            return True
+
+        except OperationalError as e:
+            print(e)
+            return False
+
+    def execute_query(cls, query: str) -> bool:
+        logging.info(query)
+        try:
+            conn = cls.create_connection()
+            with conn.cursor() as cursor:
+                queries = [q.strip() for q in query.split(';') if q.strip()]
+                for q in queries:
+                    print(f"Executing: {q};")
+                    cursor.execute(q)
+            conn.commit()
+            return True
+        except OperationalError as e:
+            print(f"OperationalError: {e}")
+            return False
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return False
 
     def process_collection(cls, mongo: MongoDB, collections: dict):
 
