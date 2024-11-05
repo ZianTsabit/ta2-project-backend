@@ -207,26 +207,51 @@ class MongoDB(BaseModel):
 
             elif data_type == "ARRAY" and value["array_type"] != "OBJECT":
 
-                pipeline = [
-                    {"$unwind": f"${key}"},
-                    {"$group": {
-                        "_id": "$_id",
-                        f"{key}": {"$addToSet": f"${key}"},
-                        "count": {"$sum": 1}
-                    }},
-                    {"$project": {
-                        "is_unique": {"$eq": [{"$size": f"${key}"}, "$count"]},
-                        f"{key}": 1
-                    }}
-                ]
+                unique = False
 
-                results_unique = list(collection.aggregate(pipeline))
+                array_size_count = collection.aggregate([
+                    {
+                        '$project': {
+                            '_id': 0,
+                            'arraySize': {
+                                '$size': f'${key}'
+                            }
+                        }
+                    }, {
+                        '$group': {
+                            '_id': None,
+                            'totalArraySize': {
+                                '$sum': '$arraySize'
+                            }
+                        }
+                    }
+                ])
 
-                unique = True
-                for i in results_unique:
-                    if i['is_unique'] is False:
-                        unique = False
-                        break
+                total_array_document = collection.aggregate([
+                    {
+                        '$unwind': {
+                            'path': f'${key}',
+                            'preserveNullAndEmptyArrays': True
+                        }
+                    }, {
+                        '$project': {
+                            '_id': 0,
+                            f'{key}': 1
+                        }
+                    }, {
+                        '$group': {
+                            '_id': f'${key}'
+                        }
+                    }, {
+                        '$count': 'totalArrayDoc'
+                    }
+                ])
+
+                array_size = list(array_size_count)[0]['totalArraySize']
+                total_array = list(total_array_document)[0]['totalArrayDoc']
+
+                if array_size == total_array:
+                    unique = True
 
                 not_null = False
                 if value['prop_in_object'] == 1.0:

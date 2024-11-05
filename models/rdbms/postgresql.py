@@ -180,7 +180,7 @@ class PostgreSQL(Rdbms):
 
                         source_rel.attributes.append(attr)
 
-                    elif f.name == dest_coll and f.data_type.split(".")[0] == "array":
+                    elif f.name == dest_coll and f.data_type.split(".")[0] == "array" and dest is None:
 
                         dest_rel.attributes.append(
                             Attribute(
@@ -291,7 +291,7 @@ class PostgreSQL(Rdbms):
 
                         source_rel.attributes.append(attr)
 
-                    elif f.name == dest_coll and f.data_type.split(".")[0] == "array":
+                    elif f.name == dest_coll and f.data_type.split(".")[0] == "array" and dest is None:
 
                         dest_primary_key_attr = Attribute(
                             name="id",
@@ -478,7 +478,9 @@ postgresql = PostgreSQL(
 )
 
 mongodb.init_collection()
+
 collections = mongodb.get_collections()
+
 cardinalities = mongodb.mapping_all_cardinalities()
 
 postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
