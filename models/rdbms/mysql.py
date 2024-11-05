@@ -278,7 +278,7 @@ class MySQL(Rdbms):
                 )
                 new_relation.attributes.append(
                     Attribute(
-                        name=f"{source_rel.name}.{source_rel.primary_key.name}",
+                        name=f"{source_rel.name}_{source_rel.primary_key.name}",
                         data_type=source_rel.primary_key.data_type,
                         not_null=source_rel.primary_key.not_null,
                         unique=source_rel.primary_key.unique
@@ -287,7 +287,7 @@ class MySQL(Rdbms):
 
                 new_relation.attributes.append(
                     Attribute(
-                        name=f"{dest_rel.name}.{dest_rel.primary_key.name}",
+                        name=f"{dest_rel.name}_{dest_rel.primary_key.name}",
                         data_type=dest_rel.primary_key.data_type,
                         not_null=dest_rel.primary_key.not_null,
                         unique=dest_rel.primary_key.unique
@@ -295,14 +295,29 @@ class MySQL(Rdbms):
                 )
 
                 new_relation.primary_key = Attribute(
-                    name=f"{source_rel.name}.{source_rel.primary_key.name}, {dest_rel.name}.{dest_rel.primary_key.name}",
+                    name=f"{source_rel.name}_{source_rel.primary_key.name}, {dest_rel.name}_{dest_rel.primary_key.name}",
                     data_type=MySQLType.NULL,
                     not_null=True,
                     unique=True
                 )
 
-                for attr in new_relation.attributes:
-                    new_relation.foreign_key.append(attr)
+                new_relation.foreign_key.append(
+                    Attribute(
+                        name=f"{dest_rel.name}.{dest_rel.name}_{dest_rel.primary_key.name}",
+                        data_type=dest_rel.primary_key.data_type,
+                        not_null=dest_rel.primary_key.not_null,
+                        unique=dest_rel.primary_key.unique
+                    )
+                )
+
+                new_relation.foreign_key.append(
+                    Attribute(
+                        name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
+                        data_type=source_rel.primary_key.data_type,
+                        not_null=source_rel.primary_key.not_null,
+                        unique=source_rel.primary_key.unique
+                    )
+                )
 
                 res[new_relation.name] = new_relation
 
