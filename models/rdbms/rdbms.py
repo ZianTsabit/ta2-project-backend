@@ -17,9 +17,9 @@ class Rdbms(BaseModel):
         engine = create_engine(cls.create_engine_url())
         return engine
 
-    def test_connection(self) -> bool:
+    def test_connection(cls) -> bool:
         try:
-            engine = self.create_connection()
+            engine = cls.create_connection()
             with engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
             return True
@@ -27,9 +27,9 @@ class Rdbms(BaseModel):
             print(e)
             return False
 
-    def execute_query(self, query: str) -> bool:
+    def execute_query(cls, query: str) -> bool:
         try:
-            engine = self.create_connection()
+            engine = cls.create_connection()
             with engine.connect() as connection:
                 connection.execute(text(query))
             return True
