@@ -45,9 +45,9 @@ class MySQLType(str, Enum):
     FLOAT = "FLOAT"
     NUM = "DOUBLE"
     DATE = "DATETIME"
-    STRING = "TEXT"
-    OID = "TEXT"
-    DB_REF = "TEXT"
+    STRING = "VARCHAR(255)"
+    OID = "VARCHAR(255)"
+    DB_REF = "VARCHAR(255)"
 
 
 class CardinalitiesType(str, Enum):
