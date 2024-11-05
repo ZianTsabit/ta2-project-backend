@@ -12,6 +12,10 @@ class PostgreSQL(Rdbms):
     engine: str = "postgresql"
     relations: Dict = {}
 
+    def create_engine_url(cls) -> str:
+
+        return f"postgresql://{cls.username}:{cls.password}@{cls.host}:{cls.port}/{cls.db}"
+
     def process_collection(cls, mongo: MongoDB, collections: dict):
 
         collection_names = list(collections.keys())
@@ -459,35 +463,3 @@ class PostgreSQL(Rdbms):
             ddl += f'    FOREIGN KEY ({fk["name"].split(".")[1]}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
 
         return ddl
-
-
-mongodb = MongoDB(
-    host='localhost',
-    port=27018,
-    db='shop',
-    username='root',
-    password='rootadmin1234'
-)
-
-postgresql = PostgreSQL(
-    host='localhost',
-    port=5436,
-    db='db_univ',
-    username='user',
-    password='admin#1234'
-)
-
-mongodb.init_collection()
-
-collections = mongodb.get_collections()
-
-cardinalities = mongodb.mapping_all_cardinalities()
-
-postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
-postgresql.process_collection(mongodb, collections)
-
-schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
-
-ddl = postgresql.generate_ddl(schema)
-
-print(ddl)

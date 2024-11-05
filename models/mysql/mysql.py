@@ -12,6 +12,9 @@ class MySQL(Rdbms):
     engine: str = "mysql"
     relations: Dict = {}
 
+    def create_engine_url(cls) -> str:
+        return f"mysql+pymysql://{cls.username}:{cls.password}@{cls.host}:{cls.port}/{cls.db}"
+
     def process_collection(cls, mongo: MongoDB, collections: dict):
 
         collection_names = list(collections.keys())
@@ -459,35 +462,3 @@ class MySQL(Rdbms):
             ddl += f'    FOREIGN KEY ({fk["name"].split(".")[1]}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
 
         return ddl
-
-
-mongodb = MongoDB(
-    host='localhost',
-    port=27018,
-    db='shop',
-    username='root',
-    password='rootadmin1234'
-)
-
-mysql = MySQL(
-    host='localhost',
-    port=5436,
-    db='db_univ',
-    username='user',
-    password='admin#1234'
-)
-
-mongodb.init_collection()
-
-collections = mongodb.get_collections()
-
-cardinalities = mongodb.mapping_all_cardinalities()
-
-mysql.process_mapping_cardinalities(mongodb, collections, cardinalities)
-mysql.process_collection(mongodb, collections)
-
-schema = {k: v.to_dict() for k, v in mysql.relations.items()}
-
-ddl = mysql.generate_ddl(schema)
-
-print(ddl)
