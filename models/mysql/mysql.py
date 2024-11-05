@@ -2,9 +2,9 @@ from typing import Dict, List
 
 from models.mongodb.cardinalities import Cardinalities
 from models.mongodb.mongodb import MongoDB
-from models.rdbms.attribute import Attribute
+from models.mysql.attribute import Attribute
+from models.mysql.relation import Relation
 from models.rdbms.rdbms import Rdbms
-from models.rdbms.relation import Relation
 from models.type import CardinalitiesType, MongoType, MySQLType
 
 
@@ -411,7 +411,10 @@ class MySQL(Rdbms):
             MongoType.DB_REF: MySQLType.DB_REF,
         }
 
-        return mapping.get(mongo_type)
+        if mongo_type in mapping:
+            return mapping.get(mongo_type)
+
+        return None
 
     def generate_ddl(cls, schema):
 
@@ -429,6 +432,8 @@ class MySQL(Rdbms):
         return "\n\n".join(ddl_statements)
 
     def create_table_ddl(cls, table: dict):
+
+        relations = cls.relations
 
         ddl = f'CREATE TABLE {table["name"]} (\n'
 
@@ -450,7 +455,39 @@ class MySQL(Rdbms):
         ddl += ");"
 
         for fk in table.get("foreign_key", []):
-            ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].replace(".", "_")}\n'
-            ddl += f'    FOREIGN KEY ({fk["name"]}) REFERENCES {fk["name"].split(".")[0]}(_id);'
+            ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].split(".")[1]}\n'
+            ddl += f'    FOREIGN KEY ({fk["name"].split(".")[1]}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
 
         return ddl
+
+
+mongodb = MongoDB(
+    host='localhost',
+    port=27018,
+    db='shop',
+    username='root',
+    password='rootadmin1234'
+)
+
+mysql = MySQL(
+    host='localhost',
+    port=5436,
+    db='db_univ',
+    username='user',
+    password='admin#1234'
+)
+
+mongodb.init_collection()
+
+collections = mongodb.get_collections()
+
+cardinalities = mongodb.mapping_all_cardinalities()
+
+mysql.process_mapping_cardinalities(mongodb, collections, cardinalities)
+mysql.process_collection(mongodb, collections)
+
+schema = {k: v.to_dict() for k, v in mysql.relations.items()}
+
+ddl = mysql.generate_ddl(schema)
+
+print(ddl)

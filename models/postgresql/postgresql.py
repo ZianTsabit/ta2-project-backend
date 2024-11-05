@@ -2,9 +2,9 @@ from typing import Dict, List
 
 from models.mongodb.cardinalities import Cardinalities
 from models.mongodb.mongodb import MongoDB
-from models.rdbms.attribute import Attribute
+from models.postgresql.attribute import Attribute
+from models.postgresql.relation import Relation
 from models.rdbms.rdbms import Rdbms
-from models.rdbms.relation import Relation
 from models.type import CardinalitiesType, MongoType, PsqlType
 
 
