@@ -1,4 +1,4 @@
-from psycopg2 import connect
+from psycopg2 import OperationalError, connect
 from pydantic import BaseModel
 
 
@@ -8,7 +8,6 @@ class Rdbms(BaseModel):
     db: str
     username: str
     password: str
-
 
     def create_connection(cls) -> connect:
 
@@ -22,7 +21,6 @@ class Rdbms(BaseModel):
 
         return connection
 
-
     def test_connection(cls) -> bool:
         connection = None
         try:
@@ -34,4 +32,19 @@ class Rdbms(BaseModel):
             return True
 
         except OperationalError as e:
+            print(e)
+            return False
+
+    def execute_query(cls, query: str):
+        connection = None
+        try:
+            connection = cls.create_connection()
+            cursor = connection.cursor()
+            cursor.execute(f'{query}')
+            cursor.close()
+            connection.close()
+            return True
+
+        except OperationalError as e:
+            print(e)
             return False
