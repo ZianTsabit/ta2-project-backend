@@ -1,8 +1,17 @@
-# ta2-project-backend
+# MongoDB to RDBMS Data Transformation Tools
 
-run backend
+## **How to run and build**
 
 ```
-
-gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:7000 --workers 4
+docker build -t ta2-api .
 ```
+
+```
+docker run -d --name ta2-container -p 5000:5000 ta2-api
+```
+
+## Contributors
+
+| NIM      | Name                  |
+| -------- | --------------------- |
+| 13520165 | GhazianTsabit Alkamil |
