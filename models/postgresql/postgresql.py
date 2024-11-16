@@ -178,7 +178,7 @@ class PostgreSQL(Rdbms):
                     if check_key_source["status"] is True and check_key_source["field"] == attr.name:
 
                         foreign_key_attr = Attribute(
-                            name=f'{source_coll}.{attr.name}',
+                            name=f'{source_coll}.{source_coll}_{attr.name}',
                             data_type=attr.data_type,
                             not_null=attr.not_null,
                             unique=attr.unique
@@ -299,7 +299,7 @@ class PostgreSQL(Rdbms):
                         dest_rel.attributes.append(primary_key_attr)
 
                     foreign_key = Attribute(
-                        name=f'{source_coll}.{source_rel.primary_key.name}',
+                        name=f'{source_coll}.{source_coll}_{source_rel.primary_key.name}',
                         data_type=source_rel.primary_key.data_type,
                         not_null=source_rel.primary_key.not_null,
                         unique=source_rel.primary_key.unique
@@ -490,7 +490,7 @@ class PostgreSQL(Rdbms):
 
         columns = []
         for attr in table["attributes"]:
-            column_line = f'    {attr["name"]} {attr["data_type"]}'
+            column_line = f'    {attr["name"].split(".")[-1]} {attr["data_type"]}'
             if attr["not_null"]:
                 column_line += " NOT NULL"
             if attr["unique"]:
