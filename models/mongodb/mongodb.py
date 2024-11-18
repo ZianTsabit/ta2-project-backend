@@ -976,3 +976,20 @@ class MongoDB(BaseModel):
                     summary[coll][key] = value['type']
 
         return summary
+
+    # TODO: function to migrate data
+
+    def get_data_by_collection(cls, coll_name: str):
+
+        '''
+        - get data and field based on the relation in the rdbms class
+        - if the field object need to flatten
+        - if the field is array need to unwind
+        - process relation that has no foreign key first
+        - for one to one need add the foreign key
+        - for many-to-many need to populate data after migrating data to parent relation done
+
+        return in list of dictionary
+        '''
+
+        pass
