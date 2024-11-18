@@ -979,7 +979,7 @@ class MongoDB(BaseModel):
 
     # TODO: function to migrate data
 
-    def get_data_by_collection(cls, coll_name: str):
+    def get_data_by_collection(cls, relation: dict):
 
         '''
         - get data and field based on the relation in the rdbms class
@@ -992,4 +992,44 @@ class MongoDB(BaseModel):
         return in list of dictionary
         '''
 
-        pass
+        client = cls.create_client()
+        db = client[cls.db]
+
+        coll_name = list(relation.keys())[0]
+        fields = list(relation[coll_name].keys())
+
+        project_query = {}
+        for i in fields:
+            project_query[i] = f'$_id.{i}'
+
+        query = [
+            {
+                '$group': {
+                    '_id': relation[coll_name]
+                }
+            }, {
+                '$project': project_query
+            }
+        ]
+
+        coll = db[coll_name]
+
+        docs = coll.aggregate(query)
+
+        data = list(docs)
+
+        return data
+
+# mongodb = MongoDB(
+#     host='localhost',
+#     port=27018,
+#     db='db_univ_2',
+#     username='root',
+#     password='rootadmin1234'
+# )
+
+# mongodb.init_collection()
+
+# relation = {'categories': {'_id': '$_id', 'name': '$name'}}
+
+# mongodb.get_data_by_collection(relation)

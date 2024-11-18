@@ -513,7 +513,7 @@ class PostgreSQL(Rdbms):
 
     # TODO: implement insert_data_by_relation function
 
-    def insert_data_by_relation(cls):
+    def insert_data_by_relation(cls, mongodb: MongoDB):
 
         '''
         call method get data by collection
@@ -548,6 +548,20 @@ class PostgreSQL(Rdbms):
 
         creation_order = get_table_creation_order()
 
+        for i in creation_order:
+
+            relation = cls.relations[i]
+            res = {}
+            res[relation.name] = {}
+
+            for attr in relation.attributes:
+                res[relation.name][f"{attr.name}"] = f"${attr.name}"
+
+            datas = mongodb.get_data_by_collection(res)
+
+            for data in datas:
+                print(data)
+
         return creation_order
 
 
@@ -576,4 +590,4 @@ postgresql.process_collection(mongodb, collections)
 
 schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
 
-print(postgresql.insert_data_by_relation())
+postgresql.insert_data_by_relation(mongodb)
