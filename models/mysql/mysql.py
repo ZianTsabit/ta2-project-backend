@@ -462,3 +462,40 @@ class MySQL(Rdbms):
             ddl += f'    FOREIGN KEY ({fk["name"].split(".")[1]}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
 
         return ddl
+
+    def insert_data_by_relation(cls):
+
+        '''
+        call method get data by collection
+        execute insert query
+        '''
+
+        schema = {k: v.to_dict() for k, v in cls.relations.items()}
+
+        def find_dependencies(table_name):
+            dependencies = []
+            for table, data in schema.items():
+                for fk in data.get("foreign_key", []):
+                    if fk["name"].startswith(table_name):
+                        dependencies.append(table)
+            return dependencies
+
+        def get_table_creation_order():
+
+            all_tables = list(schema.keys())
+            creation_order = []
+
+            while all_tables:
+                for table in all_tables:
+
+                    dependencies = find_dependencies(table)
+                    if not dependencies or all(dep in creation_order for dep in dependencies):
+                        creation_order.append(table)
+                        all_tables.remove(table)
+                        break
+
+            return creation_order[::-1]
+
+        creation_order = get_table_creation_order()
+
+        return creation_order
