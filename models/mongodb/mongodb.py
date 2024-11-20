@@ -374,7 +374,7 @@ class MongoDB(BaseModel):
                 uniqueness = result / total_documents
 
                 if uniqueness == 1.0:
-                    candidate_key.append(', '.join(rem_fields))
+                    candidate_key.append(','.join(rem_fields))
 
         client.close()
 
@@ -458,7 +458,7 @@ class MongoDB(BaseModel):
                 uniqueness = result / total_documents
 
                 if uniqueness == 1.0:
-                    candidate_key.append(', '.join(rem_fields))
+                    candidate_key.append(','.join(rem_fields))
 
         client.close()
 
@@ -573,7 +573,7 @@ class MongoDB(BaseModel):
                 uniqueness = result / total_documents
 
                 if uniqueness == 1.0:
-                    candidate_key.append(', '.join(rem_fields))
+                    candidate_key.append(','.join(rem_fields))
 
         client.close()
 
@@ -651,7 +651,7 @@ class MongoDB(BaseModel):
 
         return None
 
-    def check_parent_collection(cls, src_coll: str) -> bool:
+    def check_parent_collection(cls, src_coll: str) -> str:
 
         collections = list(cls.collections.keys())
         collections.remove(src_coll)
@@ -759,8 +759,8 @@ class MongoDB(BaseModel):
                             if f.unique is True:
 
                                 cardinality = Cardinalities(
-                                    source=coll_name,
-                                    destination=coll,
+                                    source=coll,
+                                    destination=coll_name,
                                     type=CardinalitiesType.ONE_TO_ONE
                                 )
 
@@ -846,8 +846,8 @@ class MongoDB(BaseModel):
                 if f.unique is True:
 
                     cardinality = Cardinalities(
-                        source=coll_name,
-                        destination=f.name,
+                        source=f.name,
+                        destination=coll_name,
                         type=CardinalitiesType.ONE_TO_ONE
                     )
 
@@ -979,7 +979,7 @@ class MongoDB(BaseModel):
 
     # TODO: function to migrate data
 
-    def get_data_by_collection(cls, relation: dict):
+    def get_data_by_collection(cls, relation: dict, cardinality_type: CardinalitiesType):
 
         '''
         - get data and field based on the relation in the rdbms class
@@ -998,25 +998,118 @@ class MongoDB(BaseModel):
         coll_name = list(relation.keys())[0]
         fields = list(relation[coll_name].keys())
 
-        project_query = {}
-        for i in fields:
-            project_query[i] = f'$_id.{i}'
+        colls = coll_name.split("_")
 
-        query = [
-            {
-                '$group': {
-                    '_id': relation[coll_name]
+        parent_coll = ""
+        if len(colls) < 2:
+            parent_coll = cls.check_parent_collection(coll_name)
+
+        coll_data_type = None
+        if parent_coll != "":
+            attr = cls.collections[parent_coll]
+            for i in attr:
+                if i.name == coll_name:
+                    coll_data_type = i.data_type
+
+        data = []
+
+        if parent_coll != "":
+
+            if coll_data_type is not None and coll_data_type == MongoType.OBJECT:
+
+                # TODO: add query to flatten the object
+                if cardinality_type == CardinalitiesType.ONE_TO_ONE:
+
+                    project_query = {}
+                    project_query['_id'] = 0
+                    for i in fields:
+                        project_query[i] = f'$_id.{i}'
+
+                    query = [
+                        {
+                            '$group': {
+                                '_id': f'${coll_name}'
+                            }
+                        }, {
+                            '$project': project_query
+                        }
+                    ]
+
+                    coll = db[parent_coll]
+
+                    docs = coll.aggregate(query)
+
+                    data = list(docs)
+
+            elif coll_data_type is not None and coll_data_type == MongoType.ARRAY_OF_OBJECT:
+
+                # TODO: add unwind query and project to flatten the object
+
+                project_query = {}
+                for i in fields:
+                    project_query[i] = f'$_id.{i}'
+
+                query = [
+                    {
+                        '$group': {
+                            '_id': relation[coll_name]
+                        }
+                    }, {
+                        '$project': project_query
+                    }
+                ]
+
+                coll = db[parent_coll]
+
+                docs = coll.aggregate(query)
+
+                data = list(docs)
+
+            elif coll_data_type is not None and (coll_data_type == MongoType.ARRAY_OF_STRING or coll_data_type == MongoType.ARRAY_OF_BIG_INT or coll_data_type == MongoType.ARRAY_OF_FLOAT or coll_data_type == MongoType.ARRAY_OF_NUM or coll_data_type == MongoType.ARRAY_OF_DATE or coll_data_type == MongoType.ARRAY_OF_OID):
+
+                # TODO: add unwind query
+
+                project_query = {}
+                for i in fields:
+                    project_query[i] = f'$_id.{i}'
+
+                query = [
+                    {
+                        '$group': {
+                            '_id': relation[coll_name]
+                        }
+                    }, {
+                        '$project': project_query
+                    }
+                ]
+
+                coll = db[parent_coll]
+
+                docs = coll.aggregate(query)
+
+                data = list(docs)
+
+        else:
+
+            project_query = {}
+            for i in fields:
+                project_query[i] = f'$_id.{i}'
+
+            query = [
+                {
+                    '$group': {
+                        '_id': relation[coll_name]
+                    }
+                }, {
+                    '$project': project_query
                 }
-            }, {
-                '$project': project_query
-            }
-        ]
+            ]
 
-        coll = db[coll_name]
+            coll = db[coll_name]
 
-        docs = coll.aggregate(query)
+            docs = coll.aggregate(query)
 
-        data = list(docs)
+            data = list(docs)
 
         return data
 

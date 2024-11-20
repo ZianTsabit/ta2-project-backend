@@ -150,7 +150,28 @@ class PostgreSQL(Rdbms):
 
                         source_rel.attributes.append(attr)
 
+                    elif f.name == dest_coll and f.data_type == "object":
+
+                        dest_rel.attributes.append(
+                            Attribute(
+                                name=f"{source_rel.name}_{source_rel.primary_key.name}",
+                                data_type=source_rel.primary_key.data_type,
+                                not_null=source_rel.primary_key.not_null,
+                                unique=source_rel.primary_key.unique
+                            )
+                        )
+
+                        dest_rel.foreign_key.append(
+                            Attribute(
+                                name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
+                                data_type=source_rel.primary_key.data_type,
+                                not_null=source_rel.primary_key.not_null,
+                                unique=source_rel.primary_key.unique
+                            )
+                        )
+
                 if primary_key_source is None:
+
                     primary_key_attr = Attribute(
                         name="id",
                         data_type=PsqlType.SERIAL,
@@ -165,30 +186,36 @@ class PostgreSQL(Rdbms):
                 check_key_source = mongo.check_key_in_other_collection(source_rel.primary_key.name, source_coll)
 
                 for f in dest:
-                    attr = Attribute(
-                        name=f.name,
-                        data_type=cls.data_type_mapping(f.data_type),
-                        not_null=f.not_null,
-                        unique=f.unique
-                    )
 
-                    if primary_key_dest is not None and attr.name == primary_key_dest:
-                        dest_rel.primary_key = attr
+                    psql_data_type = cls.data_type_mapping(f.data_type)
 
-                    if check_key_source["status"] is True and check_key_source["field"] == attr.name:
+                    if f.name != source_coll and psql_data_type is not None:
 
-                        foreign_key_attr = Attribute(
-                            name=f'{source_coll}.{source_coll}_{attr.name}',
-                            data_type=attr.data_type,
-                            not_null=attr.not_null,
-                            unique=attr.unique
+                        attr = Attribute(
+                            name=f.name,
+                            data_type=cls.data_type_mapping(f.data_type),
+                            not_null=f.not_null,
+                            unique=f.unique
                         )
 
-                        dest_rel.foreign_key.append(foreign_key_attr)
+                        if primary_key_dest is not None and attr.name == primary_key_dest:
+                            dest_rel.primary_key = attr
 
-                    dest_rel.attributes.append(attr)
+                        if check_key_source["status"] is True and check_key_source["field"] == attr.name:
+
+                            foreign_key_attr = Attribute(
+                                name=f'{source_coll}.{source_coll}_{attr.name}',
+                                data_type=attr.data_type,
+                                not_null=attr.not_null,
+                                unique=attr.unique
+                            )
+
+                            dest_rel.foreign_key.append(foreign_key_attr)
+
+                        dest_rel.attributes.append(attr)
 
                 if primary_key_dest is None:
+
                     primary_key_attr = Attribute(
                         name="id",
                         data_type=PsqlType.SERIAL,
@@ -197,6 +224,16 @@ class PostgreSQL(Rdbms):
                     )
                     dest_rel.primary_key = primary_key_attr
                     dest_rel.attributes.append(primary_key_attr)
+
+                if primary_key_dest is not None and dest_rel.primary_key is None:
+
+                    primary_key_attr = Attribute(
+                        name=f"({primary_key_dest})",
+                        data_type=PsqlType.NULL,
+                        not_null=True,
+                        unique=True
+                    )
+                    dest_rel.primary_key = primary_key_attr
 
             elif cardinality_type == CardinalitiesType.ONE_TO_MANY:
 
@@ -513,7 +550,7 @@ class PostgreSQL(Rdbms):
 
     # TODO: implement insert_data_by_relation function
 
-    def insert_data_by_relation(cls, mongodb: MongoDB):
+    def insert_data_by_relation(cls, mongodb: MongoDB, cardinalities: List[Cardinalities]):
 
         '''
         call method get data by collection
@@ -557,9 +594,22 @@ class PostgreSQL(Rdbms):
             for attr in relation.attributes:
                 res[relation.name][f"{attr.name}"] = f"${attr.name}"
 
-            datas = mongodb.get_data_by_collection(res)
+            cardinality_type = None
+            for card in cardinalities:
+                if card.source == relation.name or card.destination == relation.name:
+                    cardinality_type = card.type
+
+            print(res)
+            print(cardinality_type)
+
+            datas = mongodb.get_data_by_collection(res, cardinality_type)
 
             for data in datas:
+
+                # TODO: execute query to insert the data
+                # insert_query = f"INSERT INTO {relation.name} ({relation.attr}) VALUES (%s, %s);"
+                # cls.execute_query(insert_query)
+
                 print(data)
 
         return creation_order
@@ -568,7 +618,7 @@ class PostgreSQL(Rdbms):
 mongodb = MongoDB(
     host='localhost',
     port=27018,
-    db='db_univ_2',
+    db='db_school',
     username='root',
     password='rootadmin1234'
 )
@@ -585,9 +635,11 @@ mongodb.init_collection()
 collections = mongodb.get_collections()
 cardinalities = mongodb.mapping_all_cardinalities()
 
+print(cardinalities)
+
 postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
 postgresql.process_collection(mongodb, collections)
 
 schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
 
-postgresql.insert_data_by_relation(mongodb)
+postgresql.insert_data_by_relation(mongodb, cardinalities)

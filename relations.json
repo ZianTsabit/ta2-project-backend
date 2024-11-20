@@ -1,1 +1,166 @@
-{"courses_students": {"name": "courses_students", "attributes": [{"name": "courses__id", "data_type": "TEXT", "not_null": true, "unique": true}, {"name": "students__id", "data_type": "TEXT", "not_null": true, "unique": true}], "primary_key": {"name": "courses__id, students__id", "data_type": "NULL", "not_null": true, "unique": true}, "foreign_key": [{"name": "students.students__id", "data_type": "TEXT", "not_null": true, "unique": true}, {"name": "courses.courses__id", "data_type": "TEXT", "not_null": true, "unique": true}]}, "courses": {"name": "courses", "attributes": [{"name": "_id", "data_type": "TEXT", "not_null": true, "unique": true}, {"name": "label", "data_type": "TEXT", "not_null": true, "unique": true}, {"name": "nbr_hours", "data_type": "INT", "not_null": true, "unique": true}, {"name": "level", "data_type": "TEXT", "not_null": true, "unique": true}], "primary_key": {"name": "_id", "data_type": "TEXT", "not_null": true, "unique": true}, "foreign_key": []}, "students": {"name": "students", "attributes": [{"name": "_id", "data_type": "TEXT", "not_null": true, "unique": true}, {"name": "name", "data_type": "TEXT", "not_null": true, "unique": true}, {"name": "address", "data_type": "TEXT", "not_null": true, "unique": true}], "primary_key": {"name": "_id", "data_type": "TEXT", "not_null": true, "unique": true}, "foreign_key": []}, "courses_categories": {"name": "courses_categories", "attributes": [{"name": "courses__id", "data_type": "TEXT", "not_null": true, "unique": true}, {"name": "categories__id", "data_type": "TEXT", "not_null": true, "unique": true}], "primary_key": {"name": "courses__id, categories__id", "data_type": "NULL", "not_null": true, "unique": true}, "foreign_key": [{"name": "categories.categories__id", "data_type": "TEXT", "not_null": true, "unique": true}, {"name": "courses.courses__id", "data_type": "TEXT", "not_null": true, "unique": true}]}, "categories": {"name": "categories", "attributes": [{"name": "_id", "data_type": "TEXT", "not_null": true, "unique": true}, {"name": "name", "data_type": "TEXT", "not_null": true, "unique": true}], "primary_key": {"name": "_id", "data_type": "TEXT", "not_null": true, "unique": true}, "foreign_key": []}}
+{
+    "courses_students": {
+        "name": "courses_students",
+        "attributes": [
+            {
+                "name": "courses__id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "students__id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            }
+        ],
+        "primary_key": {
+            "name": "courses__id, students__id",
+            "data_type": "NULL",
+            "not_null": true,
+            "unique": true
+        },
+        "foreign_key": [
+            {
+                "name": "students.students__id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "courses.courses__id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            }
+        ]
+    },
+    "courses": {
+        "name": "courses",
+        "attributes": [
+            {
+                "name": "_id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "label",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "nbr_hours",
+                "data_type": "INT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "level",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            }
+        ],
+        "primary_key": {
+            "name": "_id",
+            "data_type": "TEXT",
+            "not_null": true,
+            "unique": true
+        },
+        "foreign_key": []
+    },
+    "students": {
+        "name": "students",
+        "attributes": [
+            {
+                "name": "_id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "name",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "address",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            }
+        ],
+        "primary_key": {
+            "name": "_id",
+            "data_type": "TEXT",
+            "not_null": true,
+            "unique": true
+        },
+        "foreign_key": []
+    },
+    "courses_categories": {
+        "name": "courses_categories",
+        "attributes": [
+            {
+                "name": "courses__id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "categories__id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            }
+        ],
+        "primary_key": {
+            "name": "courses__id, categories__id",
+            "data_type": "NULL",
+            "not_null": true,
+            "unique": true
+        },
+        "foreign_key": [
+            {
+                "name": "categories.categories__id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "courses.courses__id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            }
+        ]
+    },
+    "categories": {
+        "name": "categories",
+        "attributes": [
+            {
+                "name": "_id",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            },
+            {
+                "name": "name",
+                "data_type": "TEXT",
+                "not_null": true,
+                "unique": true
+            }
+        ],
+        "primary_key": {
+            "name": "_id",
+            "data_type": "TEXT",
+            "not_null": true,
+            "unique": true
+        },
+        "foreign_key": []
+    }
+}
