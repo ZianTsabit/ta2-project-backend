@@ -782,8 +782,8 @@ class MongoDB(BaseModel):
                             else:
 
                                 cardinality = Cardinalities(
-                                    source=coll,
-                                    destination=coll_name,
+                                    source=coll_name,
+                                    destination=coll,
                                     type=CardinalitiesType.ONE_TO_MANY
                                 )
 
@@ -1030,7 +1030,7 @@ class MongoDB(BaseModel):
         if parent_coll != "":
 
             if coll_data_type is not None and coll_data_type == MongoType.OBJECT:
-
+                
                 if cardinality_type == CardinalitiesType.ONE_TO_ONE:
 
                     project_query = {}
@@ -1053,32 +1053,28 @@ class MongoDB(BaseModel):
 
                     data = list(docs)
 
-                elif cardinality_type == CardinalitiesType.ONE_TO_MANY:
+                else:
 
-                    # TODO: prepare data first
-                    # add for the db_school, the foreign key should be in the students part refer to course
-                    # not the course refer to students
+                    project_query = {}
+                    project_query["_id"] = 0
+                    for i in fields:
+                        project_query[i] = f'$_id.{i}'
 
-                    # project_query = {}
-                    # project_query['_id'] = 0
-                    # for i in fields:
-                    #     if i.split("_")[0] == parent_coll:
-                    #         project_query[i] = f'${i.replace(f"{parent_coll}_","")}'
-                    #     else:
-                    #         project_query[i] = f'${coll_name}.{i}'
+                    query = [
+                        {
+                            '$group': {
+                                '_id':  f"${coll_name}"
+                            }
+                        }, {
+                            '$project': project_query
+                        }
+                    ]
 
-                    # query = [
-                    #     {
-                    #         '$project': project_query
-                    #     }
-                    # ]
+                    coll = db[parent_coll]
 
-                    # coll = db[parent_coll]
+                    docs = coll.aggregate(query)
 
-                    # docs = coll.aggregate(query)
-
-                    # data = list(docs)
-                    pass
+                    data = list(docs)
 
             elif coll_data_type is not None and coll_data_type == MongoType.ARRAY_OF_OBJECT:
 
@@ -1114,10 +1110,9 @@ class MongoDB(BaseModel):
                     pass
         
         elif parent_field is not None and (field_type == MongoType.ARRAY_OF_STRING or field_type == MongoType.ARRAY_OF_BIG_INT or field_type == MongoType.ARRAY_OF_FLOAT or field_type == MongoType.ARRAY_OF_NUM or field_type == MongoType.ARRAY_OF_DATE or field_type == MongoType.ARRAY_OF_OID):
-            
+
             if cardinality_type == CardinalitiesType.ONE_TO_MANY:
 
-                print(parent_field)
                 project_query = {}
                 project_query["_id"] = 0
                 lookup_query = {}
@@ -1159,8 +1154,6 @@ class MongoDB(BaseModel):
                     }
                 ]
 
-                print(pipeline)
-
                 coll = db[parent_field]
 
                 docs = coll.aggregate(pipeline)
@@ -1170,28 +1163,54 @@ class MongoDB(BaseModel):
             elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
                 pass
 
-            
         else:
-            
-            project_query = {}
-            for i in fields:
-                project_query[i] = f'$_id.{i}'
 
-            query = [
-                {
-                    '$group': {
-                        '_id': relation[coll_name]
+            if cardinality_type == CardinalitiesType.ONE_TO_MANY:
+
+                project_query = {}
+                project_query['_id'] = 0
+                for i in fields:
+                    field = i.split(".")
+                    if len(field) > 1:
+                        coll = field[0]
+                        field_name = field[-1].replace(f"{coll}_","")
+                        project_query[f'{coll}_{field_name}'] = f'${f"{coll}.{field_name}"}'
+                    else:
+                        project_query[i] = f'${i}'
+
+                query = [
+                    {
+                        '$project': project_query
                     }
-                }, {
-                    '$project': project_query
-                }
-            ]
+                ]
 
-            coll = db[coll_name]
+                coll = db[coll_name]
 
-            docs = coll.aggregate(query)
+                docs = coll.aggregate(query)
 
-            data = list(docs)
+                data = list(docs)
+
+            else:
+
+                project_query = {}
+                for i in fields:
+                    project_query[i] = f'$_id.{i}'
+
+                query = [
+                    {
+                        '$group': {
+                            '_id': relation[coll_name]
+                        }
+                    }, {
+                        '$project': project_query
+                    }
+                ]
+                
+                coll = db[coll_name]
+
+                docs = coll.aggregate(query)
+
+                data = list(docs)
 
         return data
 

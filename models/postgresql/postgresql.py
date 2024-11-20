@@ -617,7 +617,7 @@ class PostgreSQL(Rdbms):
 mongodb = MongoDB(
     host='localhost',
     port=27018,
-    db='db_univ_2',
+    db='db_school',
     username='root',
     password='rootadmin1234'
 )
