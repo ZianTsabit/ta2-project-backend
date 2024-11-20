@@ -1017,29 +1017,32 @@ class MongoDB(BaseModel):
 
             if coll_data_type is not None and coll_data_type == MongoType.OBJECT:
 
-                # TODO: add query to flatten the object
                 if cardinality_type == CardinalitiesType.ONE_TO_ONE:
 
                     project_query = {}
                     project_query['_id'] = 0
                     for i in fields:
-                        project_query[i] = f'$_id.{i}'
+                        if i.split("_")[0] == parent_coll:
+                            project_query[i] = f'${i.replace(f"{parent_coll}_","")}'
+                        else:
+                            project_query[i] = f'${coll_name}.{i}'
 
                     query = [
                         {
-                            '$group': {
-                                '_id': f'${coll_name}'
-                            }
-                        }, {
                             '$project': project_query
                         }
                     ]
+
+                    print(query)
 
                     coll = db[parent_coll]
 
                     docs = coll.aggregate(query)
 
                     data = list(docs)
+
+                else:
+                    pass
 
             elif coll_data_type is not None and coll_data_type == MongoType.ARRAY_OF_OBJECT:
 
