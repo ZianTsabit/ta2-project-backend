@@ -393,10 +393,23 @@ class MongoDB(BaseModel):
         parent_coll = ".".join(parent_list[1:])
 
         collection = db[parent_list[0]]
-        total_documents = collection.count_documents({})
-
+        
         for i in cls.collections[coll_name]:
 
+            total_document_query = [
+                {
+                    '$group': {
+                        '_id': f'${parent_coll}'
+                    }
+                },{
+                    '$count': 'total_documents'
+                }
+            ]
+
+            total_documents_docs = collection.aggregate(total_document_query)
+
+            total_documents = list(total_documents_docs)[0]['total_documents']
+            
             pipeline = [
                 {
                     '$project': {
@@ -413,7 +426,7 @@ class MongoDB(BaseModel):
             ]
 
             unique_values = collection.aggregate(pipeline)
-
+            
             unique_count = list(unique_values)[0]['uniqueCount']
             uniqueness = unique_count / total_documents
 
@@ -700,7 +713,6 @@ class MongoDB(BaseModel):
             candidate_key = cls.get_candidate_key(coll_name)
 
             for f in candidate_key:
-
                 if cls.check_key_in_other_collection(f, coll_name)["status"] is True:
                     return f
 
