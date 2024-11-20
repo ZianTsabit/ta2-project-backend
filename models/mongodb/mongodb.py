@@ -1065,7 +1065,7 @@ class MongoDB(BaseModel):
 
                     data = list(docs)
 
-                else:
+                elif cardinality_type is None:
 
                     project_query = {}
                     project_query["_id"] = 0
@@ -1090,7 +1090,6 @@ class MongoDB(BaseModel):
 
             elif coll_data_type is not None and coll_data_type == MongoType.ARRAY_OF_OBJECT:
 
-                # TODO: add unwind query and project to flatten the object
                 if cardinality_type == CardinalitiesType.ONE_TO_MANY:
 
                     project_query = {}
@@ -1217,7 +1216,7 @@ class MongoDB(BaseModel):
                         '$project': project_query
                     }
                 ]
-                
+
                 coll = db[coll_name]
 
                 docs = coll.aggregate(query)

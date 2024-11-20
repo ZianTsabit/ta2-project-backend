@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List
 
 import psycopg2
+from bson import ObjectId
 from psycopg2 import OperationalError
 
 from models.mongodb.cardinalities import Cardinalities
@@ -598,39 +599,45 @@ class PostgreSQL(Rdbms):
 
             for data in datas:
 
-                # TODO: execute query to insert the data
-                # insert_query = f"INSERT INTO {relation.name} ({relation.attr}) VALUES (%s, %s);"
-                # cls.execute_query(insert_query)
+                transformed_data = {
+                    key: str(value) if isinstance(value, ObjectId) else value for key, value in data.items()
+                }
 
-                print(data)
+                columns = ", ".join(transformed_data.keys())
+                values = ", ".join(
+                    [f"'{value}'" if isinstance(value, str) else str(value) for value in transformed_data.values()]
+                )
 
-        return creation_order
+                insert_query = f"INSERT INTO {relation.name} ({columns}) VALUES ({values});"
 
-# mongodb = MongoDB(
-#     host='localhost',
-#     port=27018,
-#     db='db_school',
-#     username='root',
-#     password='rootadmin1234'
-# )
+                print(insert_query)
+                cls.execute_query(insert_query)
 
-# postgresql = PostgreSQL(
-#     host='localhost',
-#     port=5436,
-#     db='db_univ',
-#     username='user',
-#     password='admin#1234'
-# )
+mongodb = MongoDB(
+    host='localhost',
+    port=27018,
+    db='db_school',
+    username='root',
+    password='rootadmin1234'
+)
 
-# mongodb.init_collection()
-# collections = mongodb.get_collections()
-# cardinalities = mongodb.mapping_all_cardinalities()
+postgresql = PostgreSQL(
+    host='localhost',
+    port=5436,
+    db='db_univ',
+    username='user',
+    password='admin#1234'
+)
 
-# print(cardinalities)
+mongodb.init_collection()
+collections = mongodb.get_collections()
+cardinalities = mongodb.mapping_all_cardinalities()
 
-# postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
-# postgresql.process_collection(mongodb, collections)
+print(cardinalities)
 
-# schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
+postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
+postgresql.process_collection(mongodb, collections)
 
-# postgresql.insert_data_by_relation(mongodb, cardinalities)
+schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
+
+postgresql.insert_data_by_relation(mongodb, cardinalities)
