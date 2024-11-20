@@ -272,7 +272,7 @@ class PostgreSQL(Rdbms):
 
                         dest_rel.attributes.append(
                             Attribute(
-                                name=f"{source_rel.name}_{source_rel.primary_key.name}",
+                                name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
                                 data_type=source_rel.primary_key.data_type,
                                 not_null=source_rel.primary_key.not_null,
                                 unique=source_rel.primary_key.unique

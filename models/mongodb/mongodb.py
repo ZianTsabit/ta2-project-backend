@@ -654,7 +654,8 @@ class MongoDB(BaseModel):
     def check_parent_collection(cls, src_coll: str) -> str:
 
         collections = list(cls.collections.keys())
-        collections.remove(src_coll)
+        if src_coll in collections:
+            collections.remove(src_coll)
 
         for coll in collections:
             for field in cls.collections[coll]:
@@ -1116,11 +1117,13 @@ class MongoDB(BaseModel):
             
             if cardinality_type == CardinalitiesType.ONE_TO_MANY:
 
+                print(parent_field)
                 project_query = {}
+                project_query["_id"] = 0
                 lookup_query = {}
 
                 for i in fields:
-
+                    
                     if i.split(".")[0] == parent_field:
 
                         if coll_name in cls.collections:
@@ -1133,8 +1136,13 @@ class MongoDB(BaseModel):
                             } 
 
                         project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_field}.{parent_field}_","")}'
+                    
+                    elif "_value" in i:
+
+                        project_query[i] = f'${coll_name}'
 
                     else:
+
                         project_query[i] = f'${coll_name}.{i}'
 
                 pipeline = []
