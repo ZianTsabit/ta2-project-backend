@@ -1117,68 +1117,47 @@ class MongoDB(BaseModel):
             if cardinality_type == CardinalitiesType.ONE_TO_MANY:
 
                 project_query = {}
-                project_query['_id'] = 0
-                parent_data = {}
+                lookup_query = {}
 
                 for i in fields:
-                    
+
                     if i.split(".")[0] == parent_field:
-                        pipeline = [
-                            {
-                                "$unwind": f"${coll_name}"
-                            },
-                            {
-                                "$project": {
-                                    f'{coll_name}': f'${coll_name}',
-                                    f'{i.split(".")[-1]}': f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
-                                }
-                            }
-                        ]
 
-                        coll = db[parent_field]
+                        if coll_name in cls.collections:
 
-                        docs = coll.aggregate(pipeline)
+                            lookup_query = {
+                                'from': f'{coll_name}',
+                                'localField': f'{coll_name}',
+                                'foreignField': f'{i.replace(f"{parent_field}.{parent_field}_","")}',
+                                'as': f'{coll_name}'
+                            } 
 
-                        data = list(docs)
-   
+                        project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_field}.{parent_field}_","")}'
+
                     else:
-                        pass
-                
-                [
+                        project_query[i] = f'${coll_name}.{i}'
+
+                pipeline = []
+
+                if lookup_query != {}:
+                    pipeline.append({'$lookup': lookup_query})
+
+                pipeline += [
                     {
-                        '$lookup': {
-                            'from': 'categories', 
-                            'localField': 'categories', 
-                            'foreignField': '_id', 
-                            'as': 'category_details'
-                        }
-                    }, {
-                        '$unwind': '$category_details'
-                    }, {
-                        '$project': {
-                            '_id': 0, 
-                            '_id': '$category_details._id', 
-                            'name': '$category_details.name', 
-                            'courses_id': '$_id'
-                        }
+                        "$unwind": f"${coll_name}"
+                    },
+                    {
+                        "$project": project_query
                     }
                 ]
 
-                # query = [
-                #     {
-                #         '$unwind': {
-                #             'path': f'${coll_name}'
-                #         }
-                #     }, {
-                #         '$project': project_query
-                #     }
-                # ]
+                print(pipeline)
 
-                # coll = db[parent_coll]
+                coll = db[parent_field]
 
-                # docs = coll.aggregate(query)
+                docs = coll.aggregate(pipeline)
 
-                # data = list(docs)
+                data = list(docs)
             
             elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
                 pass
