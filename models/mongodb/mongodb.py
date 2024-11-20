@@ -667,6 +667,17 @@ class MongoDB(BaseModel):
 
         return ''
 
+    def check_parent_field(cls, field_name: str) -> str:
+
+        collections = list(cls.collections.keys())
+
+        for coll in collections:
+            for field in cls.collections[coll]:
+                if field.name == field_name and (field.data_type == MongoType.ARRAY_OF_STRING or field.data_type == MongoType.ARRAY_OF_BIG_INT or field.data_type == MongoType.ARRAY_OF_FLOAT or field.data_type == MongoType.ARRAY_OF_NUM or field.data_type == MongoType.ARRAY_OF_DATE or field.data_type == MongoType.ARRAY_OF_OID):
+                    return coll, field.data_type
+
+        return '',''
+
     def check_shortest_candidate_key(cls, candidate_key) -> str:
 
         shortest = candidate_key[0].split(",")
@@ -1004,6 +1015,8 @@ class MongoDB(BaseModel):
         if len(colls) < 2:
             parent_coll = cls.check_parent_collection(coll_name)
 
+        parent_field, field_type = cls.check_parent_field(coll_name)
+
         coll_data_type = None
         if parent_coll != "":
             attr = cls.collections[parent_coll]
@@ -1082,7 +1095,7 @@ class MongoDB(BaseModel):
                     query = [
                         {
                             '$unwind': {
-                                'path': '$courses'
+                                'path': f'${coll_name}'
                             }
                         }, {
                             '$project': project_query
@@ -1098,72 +1111,100 @@ class MongoDB(BaseModel):
                 elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
 
                     pass
+        
+        elif parent_field is not None and (field_type == MongoType.ARRAY_OF_STRING or field_type == MongoType.ARRAY_OF_BIG_INT or field_type == MongoType.ARRAY_OF_FLOAT or field_type == MongoType.ARRAY_OF_NUM or field_type == MongoType.ARRAY_OF_DATE or field_type == MongoType.ARRAY_OF_OID):
+            
+            if cardinality_type == CardinalitiesType.ONE_TO_MANY:
 
-            elif coll_data_type is not None and (coll_data_type == MongoType.ARRAY_OF_STRING or coll_data_type == MongoType.ARRAY_OF_BIG_INT or coll_data_type == MongoType.ARRAY_OF_FLOAT or coll_data_type == MongoType.ARRAY_OF_NUM or coll_data_type == MongoType.ARRAY_OF_DATE or coll_data_type == MongoType.ARRAY_OF_OID):
+                project_query = {}
+                project_query['_id'] = 0
+                parent_data = {}
 
-                # TODO: add unwind query
-                if cardinality_type == CardinalitiesType.ONE_TO_MANY:
-
-                    project_query = {}
-                    project_query['_id'] = 0
-                    for i in fields:
-                        if i.split(".")[0] == parent_coll:
-                            project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
-                        else:
-                            project_query[i] = f'${coll_name}.{i}'
-
-                    query = [
-                        {
-                            '$group': {
-                                '_id': relation[coll_name]
+                for i in fields:
+                    
+                    if i.split(".")[0] == parent_field:
+                        pipeline = [
+                            {
+                                "$unwind": f"${coll_name}"
+                            },
+                            {
+                                "$project": {
+                                    f'{coll_name}': f'${coll_name}',
+                                    f'{i.split(".")[-1]}': f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
+                                }
                             }
-                        }, {
-                            '$project': project_query
+                        ]
+
+                        coll = db[parent_field]
+
+                        docs = coll.aggregate(pipeline)
+
+                        data = list(docs)
+   
+                    else:
+                        pass
+                
+                [
+                    {
+                        '$lookup': {
+                            'from': 'categories', 
+                            'localField': 'categories', 
+                            'foreignField': '_id', 
+                            'as': 'category_details'
                         }
-                    ]
+                    }, {
+                        '$unwind': '$category_details'
+                    }, {
+                        '$project': {
+                            '_id': 0, 
+                            '_id': '$category_details._id', 
+                            'name': '$category_details.name', 
+                            'courses_id': '$_id'
+                        }
+                    }
+                ]
 
-                    print(query)
+                # query = [
+                #     {
+                #         '$unwind': {
+                #             'path': f'${coll_name}'
+                #         }
+                #     }, {
+                #         '$project': project_query
+                #     }
+                # ]
 
-                    coll = db[parent_coll]
+                # coll = db[parent_coll]
 
-                    docs = coll.aggregate(query)
+                # docs = coll.aggregate(query)
 
-                    data = list(docs)
+                # data = list(docs)
+            
+            elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
+                pass
 
-                elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
-
-                    pass
-
+            
         else:
-            print(coll_name)
+            
             project_query = {}
             for i in fields:
-                coll = i.split(".")[0]
-                if coll in cls.collections:
-                    print(coll)
-                    print(cls.collections[coll])
-                # if i.split(".")[0] == parent_coll:
-                #     project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
-                # else:
-                #     project_query[i] = f'${coll_name}.{i}'
+                project_query[i] = f'$_id.{i}'
 
-            # query = [
-            #     {
-            #         '$group': {
-            #             '_id': relation[coll_name]
-            #         }
-            #     }, {
-            #         '$project': project_query
-            #     }
-            # ]
+            query = [
+                {
+                    '$group': {
+                        '_id': relation[coll_name]
+                    }
+                }, {
+                    '$project': project_query
+                }
+            ]
 
-            # print(query)
+            coll = db[coll_name]
 
-            # coll = db[coll_name]
+            docs = coll.aggregate(query)
 
-            # docs = coll.aggregate(query)
-
-            # data = list(docs)
+            data = list(docs)
 
         return data
 

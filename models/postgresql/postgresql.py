@@ -596,11 +596,10 @@ class PostgreSQL(Rdbms):
 
             cardinality_type = None
             for card in cardinalities:
-                if card.source == relation.name or card.destination == relation.name:
+                if card.destination == relation.name:
                     cardinality_type = card.type
 
             print(res)
-            print(cardinality_type)
 
             datas = mongodb.get_data_by_collection(res, cardinality_type)
 
