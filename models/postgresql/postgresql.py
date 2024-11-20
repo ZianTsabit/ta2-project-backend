@@ -606,31 +606,31 @@ class PostgreSQL(Rdbms):
 
         return creation_order
 
-mongodb = MongoDB(
-    host='localhost',
-    port=27018,
-    db='db_school',
-    username='root',
-    password='rootadmin1234'
-)
+# mongodb = MongoDB(
+#     host='localhost',
+#     port=27018,
+#     db='db_school',
+#     username='root',
+#     password='rootadmin1234'
+# )
 
-postgresql = PostgreSQL(
-    host='localhost',
-    port=5436,
-    db='db_univ',
-    username='user',
-    password='admin#1234'
-)
+# postgresql = PostgreSQL(
+#     host='localhost',
+#     port=5436,
+#     db='db_univ',
+#     username='user',
+#     password='admin#1234'
+# )
 
-mongodb.init_collection()
-collections = mongodb.get_collections()
-cardinalities = mongodb.mapping_all_cardinalities()
+# mongodb.init_collection()
+# collections = mongodb.get_collections()
+# cardinalities = mongodb.mapping_all_cardinalities()
 
-print(cardinalities)
+# print(cardinalities)
 
-postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
-postgresql.process_collection(mongodb, collections)
+# postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
+# postgresql.process_collection(mongodb, collections)
 
-schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
+# schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
 
-postgresql.insert_data_by_relation(mongodb, cardinalities)
+# postgresql.insert_data_by_relation(mongodb, cardinalities)
