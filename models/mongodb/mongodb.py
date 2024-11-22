@@ -1172,29 +1172,52 @@ class MongoDB(BaseModel):
                 data = list(docs)
             
             elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
-                pass
-            
+
+                if coll_name in cls.collections:
+
+                    project_query = {}
+                    for i in fields:
+                        project_query[i] = f'$_id.{i}'
+
+                    query = [
+                        {
+                            '$group': {
+                                '_id': relation[coll_name]
+                            }
+                        }, {
+                            '$project': project_query
+                        }
+                    ]
+
+                    coll = db[coll_name]
+
+                    docs = coll.aggregate(query)
+
+                    data = list(docs)
+
             else:
 
-                project_query = {}
-                for i in fields:
-                    project_query[i] = f'$_id.{i}'
+                if coll_name in cls.collections:
 
-                query = [
-                    {
-                        '$group': {
-                            '_id': relation[coll_name]
+                    project_query = {}
+                    for i in fields:
+                        project_query[i] = f'$_id.{i}'
+
+                    query = [
+                        {
+                            '$group': {
+                                '_id': relation[coll_name]
+                            }
+                        }, {
+                            '$project': project_query
                         }
-                    }, {
-                        '$project': project_query
-                    }
-                ]
+                    ]
 
-                coll = db[coll_name]
+                    coll = db[coll_name]
 
-                docs = coll.aggregate(query)
+                    docs = coll.aggregate(query)
 
-                data = list(docs)
+                    data = list(docs)
 
         else:
 
