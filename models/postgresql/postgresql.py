@@ -619,7 +619,7 @@ class PostgreSQL(Rdbms):
 mongodb = MongoDB(
     host='localhost',
     port=27018,
-    db='db_univ_2',
+    db='shop',
     username='root',
     password='rootadmin1234'
 )
@@ -635,8 +635,6 @@ postgresql = PostgreSQL(
 mongodb.init_collection()
 collections = mongodb.get_collections()
 cardinalities = mongodb.mapping_all_cardinalities()
-
-# print(cardinalities)
 
 postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
 postgresql.process_collection(mongodb, collections)
