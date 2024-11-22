@@ -595,6 +595,9 @@ class PostgreSQL(Rdbms):
                 if card.destination == relation.name:
                     cardinality_type = card.type
 
+            print(res)
+            print(cardinality_type)
+
             datas = mongodb.get_data_by_collection(res, cardinality_type)
 
             for data in datas:
@@ -611,12 +614,12 @@ class PostgreSQL(Rdbms):
                 insert_query = f"INSERT INTO {relation.name} ({columns}) VALUES ({values});"
 
                 print(insert_query)
-                cls.execute_query(insert_query)
+                # cls.execute_query(insert_query)
 
 mongodb = MongoDB(
     host='localhost',
     port=27018,
-    db='db_school',
+    db='db_univ_2',
     username='root',
     password='rootadmin1234'
 )
@@ -633,7 +636,7 @@ mongodb.init_collection()
 collections = mongodb.get_collections()
 cardinalities = mongodb.mapping_all_cardinalities()
 
-print(cardinalities)
+# print(cardinalities)
 
 postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
 postgresql.process_collection(mongodb, collections)

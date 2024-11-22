@@ -1173,6 +1173,28 @@ class MongoDB(BaseModel):
             
             elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
                 pass
+            
+            else:
+
+                project_query = {}
+                for i in fields:
+                    project_query[i] = f'$_id.{i}'
+
+                query = [
+                    {
+                        '$group': {
+                            '_id': relation[coll_name]
+                        }
+                    }, {
+                        '$project': project_query
+                    }
+                ]
+
+                coll = db[coll_name]
+
+                docs = coll.aggregate(query)
+
+                data = list(docs)
 
         else:
 
