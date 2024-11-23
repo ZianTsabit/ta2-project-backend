@@ -440,7 +440,7 @@ class PostgreSQL(Rdbms):
                         name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
                         data_type=source_rel.primary_key.data_type,
                         not_null=source_rel.primary_key.not_null,
-                        unique=source_rel.primary_key.unique
+                        unique=False
                     )
                 )
 
@@ -449,7 +449,7 @@ class PostgreSQL(Rdbms):
                         name=f"{dest_rel.name}.{dest_rel.name}_{dest_rel.primary_key.name}",
                         data_type=dest_rel.primary_key.data_type,
                         not_null=dest_rel.primary_key.not_null,
-                        unique=dest_rel.primary_key.unique
+                        unique=False
                     )
                 )
 
@@ -609,7 +609,7 @@ class PostgreSQL(Rdbms):
                 insert_query = f"INSERT INTO {relation.name} ({columns}) VALUES ({values});"
 
                 print(insert_query)
-                # cls.execute_query(insert_query)
+                cls.execute_query(insert_query)
 
 mongodb = MongoDB(
     host='localhost',
