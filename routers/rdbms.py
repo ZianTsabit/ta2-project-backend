@@ -190,7 +190,7 @@ async def migrate_data(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
 
         schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
 
-        postgresql.insert_data_by_relation(mongodb, cardinalities)
+        success = postgresql.insert_data_by_relation(mongodb, cardinalities)
 
     elif rdbms_type == 'mysql':
         mysql = MySQL(
@@ -205,7 +205,7 @@ async def migrate_data(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
 
         schema = {k: v.to_dict() for k, v in mysql.relations.items()}
 
-        mysql.insert_data_by_relation(mongodb, cardinalities)
+        success = mysql.insert_data_by_relation(mongodb, cardinalities)
 
     if success is True:
         return JSONResponse(
