@@ -608,8 +608,9 @@ class PostgreSQL(Rdbms):
 
                 insert_query = f"INSERT INTO {relation.name} ({columns}) VALUES ({values});"
 
-                print(insert_query)
                 cls.execute_query(insert_query)
+
+                return True
 
 # mongodb = MongoDB(
 #     host='localhost',
