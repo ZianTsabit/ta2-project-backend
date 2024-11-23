@@ -1031,233 +1031,273 @@ class MongoDB(BaseModel):
 
         data = []
 
-        if parent_coll != "":
+        if len(colls) > 1:
 
-            if coll_data_type is not None and coll_data_type == MongoType.OBJECT:
-                
-                if cardinality_type == CardinalitiesType.ONE_TO_ONE:
+            coll_1 = colls[0]
+            coll_2 = colls[1]
 
-                    project_query = {}
-                    project_query['_id'] = 0
-                    for i in fields:
-                        if i.split(".")[0] == parent_coll:
-                            project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
-                        else:
-                            project_query[i] = f'${coll_name}.{i}'
+            coll_1_parent_coll = cls.check_parent_collection(coll_1)
+            coll_1_parent_field = cls.check_parent_field(coll_1)
 
-                    query = [
-                        {
-                            '$project': project_query
-                        }
-                    ]
+            coll_2_parent_coll = cls.check_parent_collection(coll_2)
+            coll_2_parent_field = cls.check_parent_field(coll_2)
 
-                    coll = db[parent_coll]
-
-                    docs = coll.aggregate(query)
-
-                    data = list(docs)
-
-                elif cardinality_type is None:
-
-                    project_query = {}
-                    project_query["_id"] = 0
-                    for i in fields:
-                        project_query[i] = f'$_id.{i}'
-
-                    query = [
-                        {
-                            '$group': {
-                                '_id':  f"${coll_name}"
-                            }
-                        }, {
-                            '$project': project_query
-                        }
-                    ]
-
-                    coll = db[parent_coll]
-
-                    docs = coll.aggregate(query)
-
-                    data = list(docs)
-
-            elif coll_data_type is not None and coll_data_type == MongoType.ARRAY_OF_OBJECT:
-
-                if cardinality_type == CardinalitiesType.ONE_TO_MANY:
-
-                    project_query = {}
-                    project_query['_id'] = 0
-                    for i in fields:
-                        if i.split(".")[0] == parent_coll:
-                            project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
-                        else:
-                            project_query[i] = f'${coll_name}.{i}'
-
-                    query = [
-                        {
-                            '$unwind': {
-                                'path': f'${coll_name}'
-                            }
-                        }, {
-                            '$project': project_query
-                        }
-                    ]
-
-                    coll = db[parent_coll]
-
-                    docs = coll.aggregate(query)
-
-                    data = list(docs)
-
-                elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
-
-                    pass
-        
-        elif parent_field is not None and (field_type == MongoType.ARRAY_OF_STRING or field_type == MongoType.ARRAY_OF_BIG_INT or field_type == MongoType.ARRAY_OF_FLOAT or field_type == MongoType.ARRAY_OF_NUM or field_type == MongoType.ARRAY_OF_DATE or field_type == MongoType.ARRAY_OF_OID):
-
-            if cardinality_type == CardinalitiesType.ONE_TO_MANY:
+            if coll_2_parent_field[0] == coll_1 and coll_1_parent_field[0] == coll_2:
 
                 project_query = {}
                 project_query["_id"] = 0
-                lookup_query = {}
 
                 for i in fields:
-                    
-                    if i.split(".")[0] == parent_field:
 
-                        if coll_name in cls.collections:
-
-                            lookup_query = {
-                                'from': f'{coll_name}',
-                                'localField': f'{coll_name}',
-                                'foreignField': f'{i.replace(f"{parent_field}.{parent_field}_","")}',
-                                'as': f'{coll_name}'
-                            } 
-
-                        project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_field}.{parent_field}_","")}'
-                    
-                    elif "_value" in i:
-
-                        project_query[i] = f'${coll_name}'
+                    if i.split(".")[0] == coll_2:
+                        project_query[i.split(".")[-1]] = f'${coll_2}'
 
                     else:
-
-                        project_query[i] = f'${coll_name}.{i}'
-
-                pipeline = []
-
-                if lookup_query != {}:
-                    pipeline.append({'$lookup': lookup_query})
-
-                pipeline += [
-                    {
-                        "$unwind": f"${coll_name}"
-                    },
-                    {
-                        "$project": project_query
-                    }
-                ]
-
-                coll = db[parent_field]
-
-                docs = coll.aggregate(pipeline)
-
-                data = list(docs)
-            
-            elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
-
-                if coll_name in cls.collections:
-
-                    project_query = {}
-                    for i in fields:
-                        project_query[i] = f'$_id.{i}'
-
-                    query = [
-                        {
-                            '$group': {
-                                '_id': relation[coll_name]
-                            }
-                        }, {
-                            '$project': project_query
-                        }
-                    ]
-
-                    coll = db[coll_name]
-
-                    docs = coll.aggregate(query)
-
-                    data = list(docs)
-
-            else:
-
-                if coll_name in cls.collections:
-
-                    project_query = {}
-                    for i in fields:
-                        project_query[i] = f'$_id.{i}'
-
-                    query = [
-                        {
-                            '$group': {
-                                '_id': relation[coll_name]
-                            }
-                        }, {
-                            '$project': project_query
-                        }
-                    ]
-
-                    coll = db[coll_name]
-
-                    docs = coll.aggregate(query)
-
-                    data = list(docs)
-
-        else:
-
-            if cardinality_type == CardinalitiesType.ONE_TO_MANY:
-
-                project_query = {}
-                project_query['_id'] = 0
-                for i in fields:
-                    field = i.split(".")
-                    if len(field) > 1:
-                        coll = field[0]
-                        field_name = field[-1].replace(f"{coll}_","")
-                        project_query[f'{coll}_{field_name}'] = f'${f"{coll}.{field_name}"}'
-                    else:
-                        project_query[i] = f'${i}'
+                        field = i.split(".")[-1]
+                        field_name = i.replace(f"{coll_1}.{coll_1}_","")
+                        project_query[field] = f'${field_name}'
 
                 query = [
                     {
-                        '$project': project_query
-                    }
-                ]
-
-                coll = db[coll_name]
-
-                docs = coll.aggregate(query)
-
-                data = list(docs)
-
-            else:
-
-                project_query = {}
-                for i in fields:
-                    project_query[i] = f'$_id.{i}'
-
-                query = [
-                    {
-                        '$group': {
-                            '_id': relation[coll_name]
+                        '$unwind': {
+                            'path': f'${coll_2}'
                         }
                     }, {
                         '$project': project_query
                     }
                 ]
 
-                coll = db[coll_name]
+                coll = db[coll_1]
 
                 docs = coll.aggregate(query)
 
                 data = list(docs)
+
+        else:
+
+            if parent_coll != "":
+
+                if coll_data_type is not None and coll_data_type == MongoType.OBJECT:
+                    
+                    if cardinality_type == CardinalitiesType.ONE_TO_ONE:
+
+                        project_query = {}
+                        project_query['_id'] = 0
+                        for i in fields:
+                            if i.split(".")[0] == parent_coll:
+                                project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
+                            else:
+                                project_query[i] = f'${coll_name}.{i}'
+
+                        query = [
+                            {
+                                '$project': project_query
+                            }
+                        ]
+
+                        coll = db[parent_coll]
+
+                        docs = coll.aggregate(query)
+
+                        data = list(docs)
+
+                    elif cardinality_type is None:
+
+                        project_query = {}
+                        project_query["_id"] = 0
+                        for i in fields:
+                            project_query[i] = f'$_id.{i}'
+
+                        query = [
+                            {
+                                '$group': {
+                                    '_id':  f"${coll_name}"
+                                }
+                            }, {
+                                '$project': project_query
+                            }
+                        ]
+
+                        coll = db[parent_coll]
+
+                        docs = coll.aggregate(query)
+
+                        data = list(docs)
+
+                elif coll_data_type is not None and coll_data_type == MongoType.ARRAY_OF_OBJECT:
+
+                    if cardinality_type == CardinalitiesType.ONE_TO_MANY:
+
+                        project_query = {}
+                        project_query['_id'] = 0
+                        for i in fields:
+                            if i.split(".")[0] == parent_coll:
+                                project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
+                            else:
+                                project_query[i] = f'${coll_name}.{i}'
+
+                        query = [
+                            {
+                                '$unwind': {
+                                    'path': f'${coll_name}'
+                                }
+                            }, {
+                                '$project': project_query
+                            }
+                        ]
+
+                        coll = db[parent_coll]
+
+                        docs = coll.aggregate(query)
+
+                        data = list(docs)
+            
+            elif parent_field is not None and (field_type == MongoType.ARRAY_OF_STRING or field_type == MongoType.ARRAY_OF_BIG_INT or field_type == MongoType.ARRAY_OF_FLOAT or field_type == MongoType.ARRAY_OF_NUM or field_type == MongoType.ARRAY_OF_DATE or field_type == MongoType.ARRAY_OF_OID):
+
+                if cardinality_type == CardinalitiesType.ONE_TO_MANY:
+
+                    project_query = {}
+                    project_query["_id"] = 0
+                    lookup_query = {}
+
+                    for i in fields:
+                        
+                        if i.split(".")[0] == parent_field:
+
+                            if coll_name in cls.collections:
+
+                                lookup_query = {
+                                    'from': f'{coll_name}',
+                                    'localField': f'{coll_name}',
+                                    'foreignField': f'{i.replace(f"{parent_field}.{parent_field}_","")}',
+                                    'as': f'{coll_name}'
+                                } 
+
+                            project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_field}.{parent_field}_","")}'
+                        
+                        elif "_value" in i:
+
+                            project_query[i] = f'${coll_name}'
+
+                        else:
+
+                            project_query[i] = f'${coll_name}.{i}'
+
+                    pipeline = []
+
+                    if lookup_query != {}:
+                        pipeline.append({'$lookup': lookup_query})
+
+                    pipeline += [
+                        {
+                            "$unwind": f"${coll_name}"
+                        },
+                        {
+                            "$project": project_query
+                        }
+                    ]
+
+                    coll = db[parent_field]
+
+                    docs = coll.aggregate(pipeline)
+
+                    data = list(docs)
+                
+                elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
+
+                    if coll_name in cls.collections:
+
+                        project_query = {}
+                        for i in fields:
+                            project_query[i] = f'$_id.{i}'
+
+                        query = [
+                            {
+                                '$group': {
+                                    '_id': relation[coll_name]
+                                }
+                            }, {
+                                '$project': project_query
+                            }
+                        ]
+
+                        coll = db[coll_name]
+
+                        docs = coll.aggregate(query)
+
+                        data = list(docs)
+
+                else:
+
+                    if coll_name in cls.collections:
+
+                        project_query = {}
+                        for i in fields:
+                            project_query[i] = f'$_id.{i}'
+
+                        query = [
+                            {
+                                '$group': {
+                                    '_id': relation[coll_name]
+                                }
+                            }, {
+                                '$project': project_query
+                            }
+                        ]
+
+                        coll = db[coll_name]
+
+                        docs = coll.aggregate(query)
+
+                        data = list(docs)
+
+            else:
+
+                if cardinality_type == CardinalitiesType.ONE_TO_MANY:
+
+                    project_query = {}
+                    project_query['_id'] = 0
+                    for i in fields:
+                        field = i.split(".")
+                        if len(field) > 1:
+                            coll = field[0]
+                            field_name = field[-1].replace(f"{coll}_","")
+                            project_query[f'{coll}_{field_name}'] = f'${f"{coll}.{field_name}"}'
+                        else:
+                            project_query[i] = f'${i}'
+
+                    query = [
+                        {
+                            '$project': project_query
+                        }
+                    ]
+
+                    coll = db[coll_name]
+
+                    docs = coll.aggregate(query)
+
+                    data = list(docs)
+
+                else:
+
+                    project_query = {}
+                    for i in fields:
+                        project_query[i] = f'$_id.{i}'
+
+                    query = [
+                        {
+                            '$group': {
+                                '_id': relation[coll_name]
+                            }
+                        }, {
+                            '$project': project_query
+                        }
+                    ]
+
+                    coll = db[coll_name]
+
+                    docs = coll.aggregate(query)
+
+                    data = list(docs)
 
         return data

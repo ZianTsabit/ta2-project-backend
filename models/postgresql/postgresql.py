@@ -437,7 +437,7 @@ class PostgreSQL(Rdbms):
 
                 new_relation.attributes.append(
                     Attribute(
-                        name=f"{source_rel.name}_{source_rel.primary_key.name}",
+                        name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
                         data_type=source_rel.primary_key.data_type,
                         not_null=source_rel.primary_key.not_null,
                         unique=source_rel.primary_key.unique
@@ -446,7 +446,7 @@ class PostgreSQL(Rdbms):
 
                 new_relation.attributes.append(
                     Attribute(
-                        name=f"{dest_rel.name}_{dest_rel.primary_key.name}",
+                        name=f"{dest_rel.name}.{dest_rel.name}_{dest_rel.primary_key.name}",
                         data_type=dest_rel.primary_key.data_type,
                         not_null=dest_rel.primary_key.not_null,
                         unique=dest_rel.primary_key.unique
@@ -593,9 +593,6 @@ class PostgreSQL(Rdbms):
                 if card.destination == relation.name:
                     cardinality_type = card.type
 
-            print(res)
-            print(cardinality_type)
-
             datas = mongodb.get_data_by_collection(res, cardinality_type)
 
             for data in datas:
@@ -617,7 +614,7 @@ class PostgreSQL(Rdbms):
 mongodb = MongoDB(
     host='localhost',
     port=27018,
-    db='shop',
+    db='db_univ_2',
     username='root',
     password='rootadmin1234'
 )
