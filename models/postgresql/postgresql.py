@@ -549,8 +549,6 @@ class PostgreSQL(Rdbms):
 
         return ddl
 
-    # TODO: implement insert_data_by_relation function
-
     def insert_data_by_relation(cls, mongodb: MongoDB, cardinalities: List[Cardinalities]):
 
         schema = {k: v.to_dict() for k, v in cls.relations.items()}

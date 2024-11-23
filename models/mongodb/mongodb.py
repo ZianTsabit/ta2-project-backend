@@ -1001,19 +1001,11 @@ class MongoDB(BaseModel):
 
         return summary
 
-    # TODO: function to migrate data
-
     def get_data_by_collection(cls, relation: dict, cardinality_type: CardinalitiesType):
 
         '''
-        - get data and field based on the relation in the rdbms class
-        - if the field object need to flatten
-        - if the field is array need to unwind
-        - process relation that has no foreign key first
-        - for one to one need add the foreign key
-        - for many-to-many need to populate data after migrating data to parent relation done
-
-        return in list of dictionary
+        -   for many-to-many need to populate data 
+            after migrating data to parent relation done
         '''
 
         client = cls.create_client()
@@ -1269,17 +1261,3 @@ class MongoDB(BaseModel):
                 data = list(docs)
 
         return data
-
-# mongodb = MongoDB(
-#     host='localhost',
-#     port=27018,
-#     db='db_univ_2',
-#     username='root',
-#     password='rootadmin1234'
-# )
-
-# mongodb.init_collection()
-
-# relation = {'categories': {'_id': '$_id', 'name': '$name'}}
-
-# mongodb.get_data_by_collection(relation)

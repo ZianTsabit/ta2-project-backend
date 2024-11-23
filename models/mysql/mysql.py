@@ -499,3 +499,68 @@ class MySQL(Rdbms):
         creation_order = get_table_creation_order()
 
         return creation_order
+
+    def insert_data_by_relation(cls, mongodb: MongoDB, cardinalities: List[Cardinalities]):
+
+        schema = {k: v.to_dict() for k, v in cls.relations.items()}
+
+        def find_dependencies(table_name):
+            dependencies = []
+            for table, data in schema.items():
+                for fk in data.get("foreign_key", []):
+                    if fk["name"].startswith(table_name):
+                        dependencies.append(table)
+            return dependencies
+
+        def get_table_creation_order():
+
+            all_tables = list(schema.keys())
+            creation_order = []
+
+            while all_tables:
+                for table in all_tables:
+
+                    dependencies = find_dependencies(table)
+                    if not dependencies or all(dep in creation_order for dep in dependencies):
+                        creation_order.append(table)
+                        all_tables.remove(table)
+                        break
+
+            return creation_order[::-1]
+
+        creation_order = get_table_creation_order()
+
+        for i in creation_order:
+
+            relation = cls.relations[i]
+            res = {}
+            res[relation.name] = {}
+
+            for attr in relation.attributes:
+                res[relation.name][f"{attr.name}"] = f"${attr.name}"
+
+            cardinality_type = None
+            for card in cardinalities:
+                if card.destination == relation.name:
+                    cardinality_type = card.type
+
+            print(res)
+            print(cardinality_type)
+
+            datas = mongodb.get_data_by_collection(res, cardinality_type)
+
+            for data in datas:
+
+                transformed_data = {
+                    key: str(value) if isinstance(value, ObjectId) else value for key, value in data.items()
+                }
+
+                columns = ", ".join(transformed_data.keys())
+                values = ", ".join(
+                    [f"'{value}'" if isinstance(value, str) else str(value) for value in transformed_data.values()]
+                )
+
+                insert_query = f"INSERT INTO {relation.name} ({columns}) VALUES ({values});"
+
+                print(insert_query)
+                # cls.execute_query(insert_query)
