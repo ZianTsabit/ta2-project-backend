@@ -301,7 +301,7 @@ class PostgreSQL(Rdbms):
                                 name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
                                 data_type=source_rel.primary_key.data_type,
                                 not_null=source_rel.primary_key.not_null,
-                                unique=source_rel.primary_key.unique
+                                unique=False
                             )
                         )
 
@@ -340,7 +340,7 @@ class PostgreSQL(Rdbms):
                         name=f'{source_coll}.{source_coll}_{source_rel.primary_key.name}',
                         data_type=source_rel.primary_key.data_type,
                         not_null=source_rel.primary_key.not_null,
-                        unique=source_rel.primary_key.unique
+                        unique=False
                     )
 
                     dest_rel.attributes.append(foreign_key)
@@ -611,29 +611,29 @@ class PostgreSQL(Rdbms):
                 print(insert_query)
                 cls.execute_query(insert_query)
 
-mongodb = MongoDB(
-    host='localhost',
-    port=27018,
-    db='db_univ_2',
-    username='root',
-    password='rootadmin1234'
-)
+# mongodb = MongoDB(
+#     host='localhost',
+#     port=27018,
+#     db='db_univ_2',
+#     username='root',
+#     password='rootadmin1234'
+# )
 
-postgresql = PostgreSQL(
-    host='localhost',
-    port=5436,
-    db='db_univ',
-    username='user',
-    password='admin#1234'
-)
+# postgresql = PostgreSQL(
+#     host='localhost',
+#     port=5436,
+#     db='db_univ',
+#     username='user',
+#     password='admin#1234'
+# )
 
-mongodb.init_collection()
-collections = mongodb.get_collections()
-cardinalities = mongodb.mapping_all_cardinalities()
+# mongodb.init_collection()
+# collections = mongodb.get_collections()
+# cardinalities = mongodb.mapping_all_cardinalities()
 
-postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
-postgresql.process_collection(mongodb, collections)
+# postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
+# postgresql.process_collection(mongodb, collections)
 
-schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
+# schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
 
-postgresql.insert_data_by_relation(mongodb, cardinalities)
+# postgresql.insert_data_by_relation(mongodb, cardinalities)
