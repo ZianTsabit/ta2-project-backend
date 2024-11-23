@@ -167,3 +167,52 @@ async def implement_schema(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
         return Response(
             status_code=status.HTTP_204_NO_CONTENT
         )
+
+
+@router.post("/migrate-data")
+async def migrate_data(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
+    ddl = ""
+    success = False
+    mongodb.init_collection()
+    collections = mongodb.get_collections()
+    cardinalities = mongodb.mapping_all_cardinalities()
+
+    if rdbms_type == 'postgresql':
+        postgresql = PostgreSQL(
+            host=rdbms.host,
+            port=rdbms.port,
+            db=rdbms.db,
+            username=rdbms.username,
+            password=rdbms.password
+        )
+        postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
+        postgresql.process_collection(mongodb, collections)
+
+        schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
+
+        postgresql.insert_data_by_relation(mongodb, cardinalities)
+
+    elif rdbms_type == 'mysql':
+        mysql = MySQL(
+            host=rdbms.host,
+            port=rdbms.port,
+            db=rdbms.db,
+            username=rdbms.username,
+            password=rdbms.password
+        )
+        mysql.process_mapping_cardinalities(mongodb, collections, cardinalities)
+        mysql.process_collection(mongodb, collections)
+
+        schema = {k: v.to_dict() for k, v in mysql.relations.items()}
+
+        mysql.insert_data_by_relation(mongodb, cardinalities)
+
+    if success is True:
+        return JSONResponse(
+            content=jsonable_encoder(success),
+            status_code=status.HTTP_201_CREATED
+        )
+    else:
+        return Response(
+            status_code=status.HTTP_204_NO_CONTENT
+        )
