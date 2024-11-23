@@ -205,7 +205,7 @@ class PostgreSQL(Rdbms):
                         if check_key_source["status"] is True and check_key_source["field"] == attr.name:
 
                             foreign_key_attr = Attribute(
-                                name=f'{source_coll}.{source_coll}_{attr.name}',
+                                name=f'{source_coll}.{attr.name}',
                                 data_type=attr.data_type,
                                 not_null=attr.not_null,
                                 unique=attr.unique
@@ -614,7 +614,7 @@ class PostgreSQL(Rdbms):
 # mongodb = MongoDB(
 #     host='localhost',
 #     port=27018,
-#     db='db_univ_2',
+#     db='db_univ',
 #     username='root',
 #     password='rootadmin1234'
 # )
