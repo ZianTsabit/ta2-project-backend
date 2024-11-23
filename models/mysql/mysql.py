@@ -544,9 +544,6 @@ class MySQL(Rdbms):
                 if card.destination == relation.name:
                     cardinality_type = card.type
 
-            print(res)
-            print(cardinality_type)
-
             datas = mongodb.get_data_by_collection(res, cardinality_type)
 
             for data in datas:
@@ -564,4 +561,4 @@ class MySQL(Rdbms):
 
                 cls.execute_query(insert_query)
 
-                return True
+        return True

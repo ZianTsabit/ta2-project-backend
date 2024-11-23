@@ -610,7 +610,7 @@ class PostgreSQL(Rdbms):
 
                 cls.execute_query(insert_query)
 
-                return True
+        return True
 
 # mongodb = MongoDB(
 #     host='localhost',
