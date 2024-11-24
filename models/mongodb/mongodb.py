@@ -1073,6 +1073,75 @@ class MongoDB(BaseModel):
 
                 data = list(docs)
 
+            elif coll_2_parent_field[0] == coll_1 and (coll_1_parent_field[0] == "" or coll_1_parent_coll == ""):
+
+                project_query = {}
+                project_query["_id"] = 0
+                for i in fields:
+                    if i.split(".")[0] == coll_2:
+                        project_query[coll_2] = f"$_id"
+
+                query = [
+                    {
+                        '$unwind': {
+                            'path': f'${coll_2}'
+                        }
+                    }, {
+                        '$group': {
+                            '_id': f'${coll_2}'
+                        }
+                    }, {
+                        '$sort': {
+                            '_id': 1
+                        }
+                    },{
+                        '$project': project_query
+                    }
+                ]
+
+                coll = db[coll_1]
+                docs = coll.aggregate(query)
+                datas = list(docs)
+                value_id = {}
+                for i in range(0, len(datas)):
+                    value_id[datas[i][coll_2]] = i+1
+
+                project_query = {}
+                project_query["_id"] = 0
+                for i in fields:
+                    if i.split(".")[0] == coll_2_parent_field[0]:
+                        project_query[i.split(".")[-1]] = f'${i.replace(f"{coll_2_parent_field[0]}.{coll_2_parent_field[0]}_","")}'
+                    else:
+                        project_query[f'{i.split(".")[-1]}'] = f'${i.split(".")[0]}'
+
+                query = [
+                    {
+                        '$unwind': {
+                            'path': f'${coll_2}'
+                        }
+                    }, {
+                        '$project': project_query
+                    }
+                ]
+
+                coll = db[coll_1]
+
+                docs = coll.aggregate(query)
+
+                datas = list(docs)
+
+                data = []
+
+                for d in datas:
+                    res = {}
+                    for f in fields:
+                        if f.split(".")[0] == coll_1:
+                            res[f.split(".")[-1]] = d[f.split(".")[-1]]
+                        else:
+                            res[f.split(".")[-1]] = value_id[d[f.split(".")[-1]]]
+
+                    data.append(res)
+
         else:
 
             if parent_coll != "":
@@ -1151,7 +1220,34 @@ class MongoDB(BaseModel):
                         docs = coll.aggregate(query)
 
                         data = list(docs)
-            
+                    
+                    elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
+
+                        project_query = {}
+                        project_query['_id'] = 0
+                        for i in fields:
+                            project_query[i] = f'$_id.{i}'
+
+                        query = [
+                            {
+                                '$unwind': {
+                                    'path': f'${coll_name}'
+                                }
+                            }, {
+                                '$group': {
+                                    '_id': f'${coll_name}'
+                                }
+                            }, {
+                                '$project': project_query
+                            }
+                        ]
+
+                        coll = db[parent_coll]
+
+                        docs = coll.aggregate(query)
+
+                        data = list(docs)
+
             elif parent_field is not None and (field_type == MongoType.ARRAY_OF_STRING or field_type == MongoType.ARRAY_OF_BIG_INT or field_type == MongoType.ARRAY_OF_FLOAT or field_type == MongoType.ARRAY_OF_NUM or field_type == MongoType.ARRAY_OF_DATE or field_type == MongoType.ARRAY_OF_OID):
 
                 if cardinality_type == CardinalitiesType.ONE_TO_MANY:
@@ -1226,6 +1322,47 @@ class MongoDB(BaseModel):
                         docs = coll.aggregate(query)
 
                         data = list(docs)
+                    
+                    else:
+
+                        project_query = {}
+                        project_query["_id"] = 0
+                        for i in fields:
+                            if i.split("_")[0] == coll_name:
+                                project_query[i] = f"$_id"
+                            else:
+                                project_query[i] = f"${i}"
+                        
+                        query = [
+                            {
+                                '$unwind': {
+                                    'path': f'${coll_name}'
+                                }
+                            }, {
+                                '$group': {
+                                    '_id': f'${coll_name}'
+                                }
+                            }, {
+                                '$sort': {
+                                    '_id': 1
+                                }
+                            }, {
+                                '$project': project_query
+                            }
+                        ]
+
+                        coll = db[parent_field]
+
+                        docs = coll.aggregate(query)
+
+                        datas = list(docs)
+
+                        data = []
+
+                        for i in range(0, len(datas)):
+                            value = datas[i]
+                            value['id'] = i+1
+                            data.append(value)
 
                 else:
 
