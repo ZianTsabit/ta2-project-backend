@@ -1073,7 +1073,7 @@ class MongoDB(BaseModel):
 
                 data = list(docs)
 
-            elif coll_2_parent_field[0] == coll_1 and (coll_1_parent_field[0] == "" or coll_1_parent_coll == ""):
+            elif coll_2_parent_field[0] == coll_1 and coll_1_parent_field[0] == "" and coll_1_parent_coll == "":
 
                 project_query = {}
                 project_query["_id"] = 0
@@ -1141,6 +1141,68 @@ class MongoDB(BaseModel):
                             res[f.split(".")[-1]] = value_id[d[f.split(".")[-1]]]
 
                     data.append(res)
+
+            elif coll_2_parent_coll == coll_1 and coll_1_parent_field[0] == "" and coll_1_parent_coll == "":
+
+                project_query = {}
+                project_query["_id"] = 0
+
+                for i in fields:
+    
+                    if i.split(".")[0] == coll_2_parent_coll:
+                        project_query[i.split(".")[-1]] = f'${i.replace(f"{coll_2_parent_coll}.{coll_2_parent_coll}_","")}'
+                    
+                    else:
+                        field_name = i.split(".")[-1]
+                        coll_name = i.split(".")[0]
+                        project_query[field_name] = f'${coll_name}.{field_name.replace(f"{coll_name}_","")}'
+
+                query = [
+                    {
+                        '$unwind': {
+                            'path': f'${coll_2}'
+                        }
+                    }, {
+                        '$project': project_query
+                    }
+                ]
+
+                coll = db[coll_1]
+
+                docs = coll.aggregate(query)
+
+                data = list(docs)
+
+            elif coll_2_parent_field[0] == coll_1 and coll_2 in cls.collections:
+
+                project_query = {}
+                project_query["_id"] = 0
+
+                for i in fields:
+    
+                    if i.split(".")[0] == coll_1:
+                        project_query[i.split(".")[-1]] = f'${i.replace(f"{coll_1}.{coll_1}_","")}'
+
+                    else:
+                        field_name = i.split(".")[-1]
+                        coll_name = i.split(".")[0]
+                        project_query[field_name] = f'${coll_name}'
+
+                query = [
+                    {
+                        '$unwind': {
+                            'path': f'${coll_2}'
+                        }
+                    }, {
+                        '$project': project_query
+                    }
+                ]
+
+                coll = db[coll_1]
+
+                docs = coll.aggregate(query)
+
+                data = list(docs)
 
         else:
 
