@@ -610,8 +610,6 @@ class PostgreSQL(Rdbms):
                 if card.destination == relation.name:
                     cardinality_type = card.type
 
-            relation_name = list(res.keys())[0]
-
             datas = mongodb.get_data_by_collection(res, cardinality_type)
 
             for data in datas:

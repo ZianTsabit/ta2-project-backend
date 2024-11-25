@@ -102,10 +102,31 @@ class MySQL(Rdbms):
 
                         source_rel.attributes.append(attr)
 
+                    elif f.name == dest_coll and f.data_type == "object":
+
+                        dest_rel.attributes.append(
+                            Attribute(
+                                name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
+                                data_type=source_rel.primary_key.data_type,
+                                not_null=source_rel.primary_key.not_null,
+                                unique=source_rel.primary_key.unique
+                            )
+                        )
+
+                        dest_rel.foreign_key.append(
+                            Attribute(
+                                name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
+                                data_type=source_rel.primary_key.data_type,
+                                not_null=source_rel.primary_key.not_null,
+                                unique=source_rel.primary_key.unique
+                            )
+                        )
+
                 if primary_key_source is None:
+
                     primary_key_attr = Attribute(
                         name="id",
-                        data_type=MySQLType.SERIAL,
+                        data_type=PsqlType.SERIAL,
                         not_null=True,
                         unique=True
                     )
@@ -117,38 +138,54 @@ class MySQL(Rdbms):
                 check_key_source = mongo.check_key_in_other_collection(source_rel.primary_key.name, source_coll)
 
                 for f in dest:
-                    attr = Attribute(
-                        name=f.name,
-                        data_type=cls.data_type_mapping(f.data_type),
-                        not_null=f.not_null,
-                        unique=f.unique
-                    )
 
-                    if primary_key_dest is not None and attr.name == primary_key_dest:
-                        dest_rel.primary_key = attr
+                    psql_data_type = cls.data_type_mapping(f.data_type)
 
-                    if check_key_source["status"] is True and check_key_source["field"] == attr.name:
+                    if f.name != source_coll and psql_data_type is not None:
 
-                        foreign_key_attr = Attribute(
-                            name=f'{source_coll}.{attr.name}',
-                            data_type=attr.data_type,
-                            not_null=attr.not_null,
-                            unique=attr.unique
+                        attr = Attribute(
+                            name=f.name,
+                            data_type=cls.data_type_mapping(f.data_type),
+                            not_null=f.not_null,
+                            unique=f.unique
                         )
 
-                        dest_rel.foreign_key.append(foreign_key_attr)
+                        if primary_key_dest is not None and attr.name == primary_key_dest:
+                            dest_rel.primary_key = attr
 
-                    dest_rel.attributes.append(attr)
+                        if check_key_source["status"] is True and check_key_source["field"] == attr.name:
+
+                            foreign_key_attr = Attribute(
+                                name=f'{source_coll}.{attr.name}',
+                                data_type=attr.data_type,
+                                not_null=attr.not_null,
+                                unique=attr.unique
+                            )
+
+                            dest_rel.foreign_key.append(foreign_key_attr)
+
+                        dest_rel.attributes.append(attr)
 
                 if primary_key_dest is None:
+
                     primary_key_attr = Attribute(
                         name="id",
-                        data_type=MySQLType.SERIAL,
+                        data_type=PsqlType.SERIAL,
                         not_null=True,
                         unique=True
                     )
                     dest_rel.primary_key = primary_key_attr
                     dest_rel.attributes.append(primary_key_attr)
+
+                if primary_key_dest is not None and dest_rel.primary_key is None:
+
+                    primary_key_attr = Attribute(
+                        name=f"({primary_key_dest})",
+                        data_type=PsqlType.NULL,
+                        not_null=True,
+                        unique=True
+                    )
+                    dest_rel.primary_key = primary_key_attr
 
             elif cardinality_type == CardinalitiesType.ONE_TO_MANY:
 
@@ -157,7 +194,7 @@ class MySQL(Rdbms):
                 if primary_key_source is None:
                     primary_key_attr = Attribute(
                         name="id",
-                        data_type=MySQLType.SERIAL,
+                        data_type=PsqlType.SERIAL,
                         not_null=True,
                         unique=True
                     )
@@ -183,14 +220,14 @@ class MySQL(Rdbms):
 
                         source_rel.attributes.append(attr)
 
-                    elif f.name == dest_coll and f.data_type.split(".")[0] == "array":
+                    elif f.name == dest_coll and f.data_type.split(".")[0] == "array" and dest is None:
 
                         dest_rel.attributes.append(
                             Attribute(
-                                name=f"{source_rel.name}_{source_rel.primary_key.name}",
+                                name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
                                 data_type=source_rel.primary_key.data_type,
                                 not_null=source_rel.primary_key.not_null,
-                                unique=source_rel.primary_key.unique
+                                unique=False
                             )
                         )
 
@@ -205,7 +242,7 @@ class MySQL(Rdbms):
 
                         dest_rel.primary_key = Attribute(
                             name=f"{source_rel.name}_{source_rel.primary_key.name}, {dest_rel.name}_value",
-                            data_type=MySQLType.NULL,
+                            data_type=PsqlType.NULL,
                             not_null=True,
                             unique=True
                         )
@@ -215,7 +252,7 @@ class MySQL(Rdbms):
                                 name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
                                 data_type=source_rel.primary_key.data_type,
                                 not_null=source_rel.primary_key.not_null,
-                                unique=source_rel.primary_key.unique
+                                unique=False
                             )
                         )
 
@@ -223,9 +260,12 @@ class MySQL(Rdbms):
 
                     primary_key_dest = mongo.get_primary_key(dest_coll)
 
+                    check_key_source = mongo.check_key_in_other_collection(source_rel.primary_key.name, source_coll)
+
                     for f in dest:
 
                         psql_data_type = cls.data_type_mapping(f.data_type)
+                        
                         if f.name != source_coll and psql_data_type is not None:
 
                             attr = Attribute(
@@ -238,28 +278,42 @@ class MySQL(Rdbms):
                             if primary_key_dest is not None and attr.name == primary_key_dest:
                                 dest_rel.primary_key = attr
 
+                            if check_key_source["status"] is True and check_key_source["field"] == attr.name:
+
+                                foreign_key_attr = Attribute(
+                                    name=f'{source_coll}.{attr.name}',
+                                    data_type=attr.data_type,
+                                    not_null=attr.not_null,
+                                    unique=attr.unique
+                                )
+
+                                dest_rel.foreign_key.append(foreign_key_attr)
+
                             dest_rel.attributes.append(attr)
 
                     if primary_key_dest is None:
+
                         primary_key_attr = Attribute(
                             name="id",
-                            data_type=MySQLType.SERIAL,
+                            data_type=PsqlType.SERIAL,
                             not_null=True,
                             unique=True
                         )
                         dest_rel.primary_key = primary_key_attr
                         dest_rel.attributes.append(primary_key_attr)
 
-                    foreign_key = Attribute(
-                        name=f'{source_coll}.{source_rel.primary_key.name}',
-                        data_type=source_rel.primary_key.data_type,
-                        not_null=source_rel.primary_key.not_null,
-                        unique=source_rel.primary_key.unique
-                    )
+                    if len(dest_rel.foreign_key) < 1:
 
-                    dest_rel.attributes.append(foreign_key)
+                        foreign_key = Attribute(
+                            name=f'{source_coll}.{source_coll}_{source_rel.primary_key.name}',
+                            data_type=source_rel.primary_key.data_type,
+                            not_null=source_rel.primary_key.not_null,
+                            unique=False
+                        )
 
-                    dest_rel.foreign_key.append(foreign_key)
+                        dest_rel.attributes.append(foreign_key)
+
+                        dest_rel.foreign_key.append(foreign_key)
 
             elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
 
@@ -272,7 +326,7 @@ class MySQL(Rdbms):
                     if primary_key_source is None:
                         primary_key_attr = Attribute(
                             name="id",
-                            data_type=MySQLType.SERIAL,
+                            data_type=PsqlType.SERIAL,
                             not_null=True,
                             unique=True
                         )
@@ -294,11 +348,11 @@ class MySQL(Rdbms):
 
                         source_rel.attributes.append(attr)
 
-                    elif f.name == dest_coll and f.data_type.split(".")[0] == "array":
+                    elif f.name == dest_coll and f.data_type.split(".")[0] == "array" and dest is None:
 
                         dest_primary_key_attr = Attribute(
                             name="id",
-                            data_type=MySQLType.SERIAL,
+                            data_type=PsqlType.SERIAL,
                             not_null=True,
                             unique=True
                         )
@@ -322,7 +376,7 @@ class MySQL(Rdbms):
                     if primary_key_dest is None:
                         primary_key_attr = Attribute(
                             name="id",
-                            data_type=MySQLType.SERIAL,
+                            data_type=PsqlType.SERIAL,
                             not_null=True,
                             unique=True
                         )
@@ -351,25 +405,25 @@ class MySQL(Rdbms):
 
                 new_relation.attributes.append(
                     Attribute(
-                        name=f"{source_rel.name}_{source_rel.primary_key.name}",
+                        name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
                         data_type=source_rel.primary_key.data_type,
                         not_null=source_rel.primary_key.not_null,
-                        unique=source_rel.primary_key.unique
+                        unique=False
                     )
                 )
 
                 new_relation.attributes.append(
                     Attribute(
-                        name=f"{dest_rel.name}_{dest_rel.primary_key.name}",
+                        name=f"{dest_rel.name}.{dest_rel.name}_{dest_rel.primary_key.name}",
                         data_type=dest_rel.primary_key.data_type,
                         not_null=dest_rel.primary_key.not_null,
-                        unique=dest_rel.primary_key.unique
+                        unique=False
                     )
                 )
 
                 new_relation.primary_key = Attribute(
                     name=f"{source_rel.name}_{source_rel.primary_key.name}, {dest_rel.name}_{dest_rel.primary_key.name}",
-                    data_type=MySQLType.NULL,
+                    data_type=PsqlType.NULL,
                     not_null=True,
                     unique=True
                 )
