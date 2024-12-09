@@ -1,6 +1,7 @@
 import itertools
 from typing import Dict
 
+from fuzzywuzzy import fuzz
 from pydantic import BaseModel
 from pymongo import MongoClient
 from pymongo_schema.extract import extract_pymongo_client_schema
@@ -509,12 +510,13 @@ class MongoDB(BaseModel):
                     found = list(target_coll.find({f"{field.name}": find}))
 
                     if len(found) > 0:
+                        if fuzz.ratio(field.name, src_coll + src_key) > 90:
 
-                        res["collection"] = c
-                        res["field"] = field.name
-                        res["status"] = True
+                            res["collection"] = c
+                            res["field"] = field.name
+                            res["status"] = True
 
-                        return res
+                            return res
 
         client.close()
 
