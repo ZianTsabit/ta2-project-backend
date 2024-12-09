@@ -26,7 +26,7 @@ class MongoDB(BaseModel):
             port=cls.port,
             username=cls.username,
             password=cls.password,
-            serverSelectionTimeoutMS=5000
+            serverSelectionTimeoutMS=5000,
         )
 
         return client
@@ -51,15 +51,13 @@ class MongoDB(BaseModel):
         basic_schema = cls.generate_basic_schema()
 
         for coll in basic_schema.keys():
-            collection = Collection(
-                name=coll
-            )
+            collection = Collection(name=coll)
             for field in basic_schema[coll]:
                 field = Field(
                     name=field["name"],
                     data_type=field["data_type"],
                     not_null=field["not_null"],
-                    unique=field["unique"]
+                    unique=field["unique"],
                 )
 
                 collection.fields.append(field)
@@ -67,12 +65,8 @@ class MongoDB(BaseModel):
             cls.collections[coll] = collection.fields
 
     def process_object(
-            cls,
-            coll_name,
-            object_data,
-            parent_key="",
-            result=None,
-            final_schema=None) -> dict:
+        cls, coll_name, object_data, parent_key="", result=None, final_schema=None
+    ) -> dict:
 
         client = cls.create_client()
         db = client[cls.db]
@@ -88,7 +82,7 @@ class MongoDB(BaseModel):
 
             res = {}
             data_type = value["type"]
-            total_documents = value['count']
+            total_documents = value["count"]
 
             if data_type == "OBJECT":
 
@@ -97,37 +91,27 @@ class MongoDB(BaseModel):
                     object_data=value["object"],
                     parent_key=key,
                     result=[],
-                    final_schema=final_schema
+                    final_schema=final_schema,
                 )
 
                 final_schema[key] = nested_result
 
                 not_null = False
-                count = collection.aggregate([
-                    {
-                        '$match': {
-                            f'{key}': {
-                                '$ne': None
-                            }
-                        }
-                    }, {
-                        '$count': 'count'
-                    }
-                ])
+                count = collection.aggregate(
+                    [{"$match": {f"{key}": {"$ne": None}}}, {"$count": "count"}]
+                )
 
-                count_values = list(count)[0]['count']
+                count_values = list(count)[0]["count"]
 
                 if count_values == total_documents:
                     not_null = True
 
                 unique = False
-                unique_values = collection.aggregate([
-                    {"$group": {
-                        "_id": f"${key}"}},
-                    {"$count": "uniqueCount"}
-                ])
+                unique_values = collection.aggregate(
+                    [{"$group": {"_id": f"${key}"}}, {"$count": "uniqueCount"}]
+                )
 
-                unique_count = list(unique_values)[0]['uniqueCount']
+                unique_count = list(unique_values)[0]["uniqueCount"]
                 uniqueness = unique_count / total_documents
 
                 if uniqueness == 1.0:
@@ -145,57 +129,45 @@ class MongoDB(BaseModel):
                     object_data=value["object"],
                     parent_key=key,
                     result=[],
-                    final_schema=final_schema
+                    final_schema=final_schema,
                 )
 
                 final_schema[key] = nested_result
 
                 not_null = False
-                if value['prop_in_object'] == 1.0:
+                if value["prop_in_object"] == 1.0:
                     not_null = True
 
                 unique = False
 
-                array_size_count = collection.aggregate([
-                    {
-                        '$project': {
-                            '_id': 0,
-                            'arraySize': {
-                                '$size': f'${key}'
+                array_size_count = collection.aggregate(
+                    [
+                        {"$project": {"_id": 0, "arraySize": {"$size": f"${key}"}}},
+                        {
+                            "$group": {
+                                "_id": None,
+                                "totalArraySize": {"$sum": "$arraySize"},
                             }
-                        }
-                    }, {
-                        '$group': {
-                            '_id': None,
-                            'totalArraySize': {
-                                '$sum': '$arraySize'
+                        },
+                    ]
+                )
+
+                total_array_document = collection.aggregate(
+                    [
+                        {
+                            "$unwind": {
+                                "path": f"${key}",
+                                "preserveNullAndEmptyArrays": True,
                             }
-                        }
-                    }
-                ])
+                        },
+                        {"$project": {"_id": 0, f"{key}": 1}},
+                        {"$group": {"_id": f"${key}"}},
+                        {"$count": "totalArrayDoc"},
+                    ]
+                )
 
-                total_array_document = collection.aggregate([
-                    {
-                        '$unwind': {
-                            'path': f'${key}',
-                            'preserveNullAndEmptyArrays': True
-                        }
-                    }, {
-                        '$project': {
-                            '_id': 0,
-                            f'{key}': 1
-                        }
-                    }, {
-                        '$group': {
-                            '_id': f'${key}'
-                        }
-                    }, {
-                        '$count': 'totalArrayDoc'
-                    }
-                ])
-
-                array_size = list(array_size_count)[0]['totalArraySize']
-                total_array = list(total_array_document)[0]['totalArrayDoc']
+                array_size = list(array_size_count)[0]["totalArraySize"]
+                total_array = list(total_array_document)[0]["totalArrayDoc"]
 
                 if array_size == total_array:
                     unique = True
@@ -209,52 +181,40 @@ class MongoDB(BaseModel):
 
                 unique = False
 
-                array_size_count = collection.aggregate([
-                    {
-                        '$project': {
-                            '_id': 0,
-                            'arraySize': {
-                                '$size': f'${key}'
+                array_size_count = collection.aggregate(
+                    [
+                        {"$project": {"_id": 0, "arraySize": {"$size": f"${key}"}}},
+                        {
+                            "$group": {
+                                "_id": None,
+                                "totalArraySize": {"$sum": "$arraySize"},
                             }
-                        }
-                    }, {
-                        '$group': {
-                            '_id': None,
-                            'totalArraySize': {
-                                '$sum': '$arraySize'
+                        },
+                    ]
+                )
+
+                total_array_document = collection.aggregate(
+                    [
+                        {
+                            "$unwind": {
+                                "path": f"${key}",
+                                "preserveNullAndEmptyArrays": True,
                             }
-                        }
-                    }
-                ])
+                        },
+                        {"$project": {"_id": 0, f"{key}": 1}},
+                        {"$group": {"_id": f"${key}"}},
+                        {"$count": "totalArrayDoc"},
+                    ]
+                )
 
-                total_array_document = collection.aggregate([
-                    {
-                        '$unwind': {
-                            'path': f'${key}',
-                            'preserveNullAndEmptyArrays': True
-                        }
-                    }, {
-                        '$project': {
-                            '_id': 0,
-                            f'{key}': 1
-                        }
-                    }, {
-                        '$group': {
-                            '_id': f'${key}'
-                        }
-                    }, {
-                        '$count': 'totalArrayDoc'
-                    }
-                ])
-
-                array_size = list(array_size_count)[0]['totalArraySize']
-                total_array = list(total_array_document)[0]['totalArrayDoc']
+                array_size = list(array_size_count)[0]["totalArraySize"]
+                total_array = list(total_array_document)[0]["totalArrayDoc"]
 
                 if array_size == total_array:
                     unique = True
 
                 not_null = False
-                if value['prop_in_object'] == 1.0:
+                if value["prop_in_object"] == 1.0:
                     not_null = True
 
                 res["name"] = f"{key}"
@@ -265,30 +225,24 @@ class MongoDB(BaseModel):
             else:
                 not_null = False
                 if coll_name == parent_key:
-                    if value['prop_in_object'] == 1.0:
+                    if value["prop_in_object"] == 1.0:
                         not_null = True
                 else:
-                    pipeline = [
-                        {
-                            "$unwind": f"${parent_key}"
-                        }, {
-                            '$count': 'count'
-                        }
-                    ]
+                    pipeline = [{"$unwind": f"${parent_key}"}, {"$count": "count"}]
                     count_values = collection.aggregate(pipeline)
-                    res_count = list(count_values)[0]['count']
-                    if round(value['prop_in_object'], 2) == round(res_count / collection.count_documents({}), 2):
+                    res_count = list(count_values)[0]["count"]
+                    if round(value["prop_in_object"], 2) == round(
+                        res_count / collection.count_documents({}), 2
+                    ):
                         not_null = True
 
                 unique = False
                 if coll_name == parent_key:
-                    unique_values = collection.aggregate([
-                        {"$group": {
-                            "_id": f"${key}"}},
-                        {"$count": "uniqueCount"}
-                    ])
+                    unique_values = collection.aggregate(
+                        [{"$group": {"_id": f"${key}"}}, {"$count": "uniqueCount"}]
+                    )
 
-                    unique_count = list(unique_values)[0]['uniqueCount']
+                    unique_count = list(unique_values)[0]["uniqueCount"]
                     uniqueness = unique_count / total_documents
 
                     if uniqueness == 1.0:
@@ -320,7 +274,7 @@ class MongoDB(BaseModel):
                 coll_name=coll,
                 object_data=object_data,
                 parent_key=coll,
-                final_schema=final_schema
+                final_schema=final_schema,
             )
 
             final_schema[coll] = processed_schema
@@ -358,23 +312,17 @@ class MongoDB(BaseModel):
 
                 inside_query = {}
                 for z in rem_fields:
-                    inside_query[z] = f'${z}'
+                    inside_query[z] = f"${z}"
 
-                unique_values = collection.aggregate([
-                    {
-                        '$group': {
-                            '_id': inside_query
-                        }
-                    }, {
-                        '$count': 'uniqueCount'
-                    }
-                ])
+                unique_values = collection.aggregate(
+                    [{"$group": {"_id": inside_query}}, {"$count": "uniqueCount"}]
+                )
 
-                result = list(unique_values)[0]['uniqueCount']
+                result = list(unique_values)[0]["uniqueCount"]
                 uniqueness = result / total_documents
 
                 if uniqueness == 1.0:
-                    candidate_key.append(','.join(rem_fields))
+                    candidate_key.append(",".join(rem_fields))
 
         client.close()
 
@@ -388,46 +336,32 @@ class MongoDB(BaseModel):
         candidate_key = []
         temp_candidate_key = []
 
-        parent = cls.check_parent_collection(coll_name) + f'.{coll_name}'
+        parent = cls.check_parent_collection(coll_name) + f".{coll_name}"
         parent_list = parent.split(".")
         parent_coll = ".".join(parent_list[1:])
 
         collection = db[parent_list[0]]
-        
+
         for i in cls.collections[coll_name]:
 
             total_document_query = [
-                {
-                    '$group': {
-                        '_id': f'${parent_coll}'
-                    }
-                },{
-                    '$count': 'total_documents'
-                }
+                {"$group": {"_id": f"${parent_coll}"}},
+                {"$count": "total_documents"},
             ]
 
             total_documents_docs = collection.aggregate(total_document_query)
 
-            total_documents = list(total_documents_docs)[0]['total_documents']
-            
+            total_documents = list(total_documents_docs)[0]["total_documents"]
+
             pipeline = [
-                {
-                    '$project': {
-                        '_id': 0,
-                        f'{i.name}': f'${parent_coll}.{i.name}'
-                    }
-                }, {
-                    '$group': {
-                        '_id': f'${i.name}'
-                    }
-                }, {
-                    '$count': 'uniqueCount'
-                }
+                {"$project": {"_id": 0, f"{i.name}": f"${parent_coll}.{i.name}"}},
+                {"$group": {"_id": f"${i.name}"}},
+                {"$count": "uniqueCount"},
             ]
 
             unique_values = collection.aggregate(pipeline)
-            
-            unique_count = list(unique_values)[0]['uniqueCount']
+
+            unique_count = list(unique_values)[0]["uniqueCount"]
             uniqueness = unique_count / total_documents
 
             if i.not_null is True:
@@ -450,28 +384,21 @@ class MongoDB(BaseModel):
                 group_query = {}
 
                 for z in rem_fields:
-                    project_query[z] = f'${parent_coll}.{z}'
-                    group_query[z] = f'${z}'
+                    project_query[z] = f"${parent_coll}.{z}"
+                    group_query[z] = f"${z}"
 
                 pipeline = [
-                    {
-                        '$project': project_query
-                    },
-                    {
-                        '$group': {
-                            '_id': group_query
-                        }
-                    }, {
-                        '$count': 'uniqueCount'
-                    }
+                    {"$project": project_query},
+                    {"$group": {"_id": group_query}},
+                    {"$count": "uniqueCount"},
                 ]
 
                 unique_values = collection.aggregate(pipeline)
-                result = list(unique_values)[0]['uniqueCount']
+                result = list(unique_values)[0]["uniqueCount"]
                 uniqueness = result / total_documents
 
                 if uniqueness == 1.0:
-                    candidate_key.append(','.join(rem_fields))
+                    candidate_key.append(",".join(rem_fields))
 
         client.close()
 
@@ -485,20 +412,15 @@ class MongoDB(BaseModel):
         candidate_key = []
         temp_candidate_key = []
 
-        parent = cls.check_parent_collection(coll_name) + f'.{coll_name}'
+        parent = cls.check_parent_collection(coll_name) + f".{coll_name}"
         parent_list = parent.split(".")
         parent_coll = ".".join(parent_list[1:])
 
         collection = db[parent_list[0]]
 
         total_document_pipeline = [
-            {
-                '$unwind': f'${parent_coll}'
-            }, {
-                '$group': {
-                    '_id': f'${parent_coll}'
-                }
-            }
+            {"$unwind": f"${parent_coll}"},
+            {"$group": {"_id": f"${parent_coll}"}},
         ]
 
         total_documents = len(list(collection.aggregate(total_document_pipeline)))
@@ -506,35 +428,17 @@ class MongoDB(BaseModel):
         for i in cls.collections[coll_name]:
 
             pipeline = [
-                {
-                    '$unwind': f'${coll_name}'
-                }, {
-                    '$group': {
-                        '_id': f'${coll_name}'
-                    }
-                }, {
-                    '$project': {
-                        '_id': 0,
-                        f'{i.name}': f'$_id.{i.name}'
-                    }
-                }, {
-                    '$group': {
-                        '_id': f'${i.name}'
-                    }
-                }, {
-                    '$match': {
-                        '_id': {
-                            '$ne': None
-                        }
-                    }
-                }, {
-                    '$count': 'uniqueCount'
-                }
+                {"$unwind": f"${coll_name}"},
+                {"$group": {"_id": f"${coll_name}"}},
+                {"$project": {"_id": 0, f"{i.name}": f"$_id.{i.name}"}},
+                {"$group": {"_id": f"${i.name}"}},
+                {"$match": {"_id": {"$ne": None}}},
+                {"$count": "uniqueCount"},
             ]
 
             unique_values = collection.aggregate(pipeline)
 
-            unique_count = list(unique_values)[0]['uniqueCount']
+            unique_count = list(unique_values)[0]["uniqueCount"]
             uniqueness = unique_count / total_documents
 
             if i.not_null is True:
@@ -558,44 +462,29 @@ class MongoDB(BaseModel):
                 group_query = {}
 
                 for z in rem_fields:
-                    project_query[z] = f'${parent_coll}.{z}'
-                    group_query[z] = f'${z}'
+                    project_query[z] = f"${parent_coll}.{z}"
+                    group_query[z] = f"${z}"
 
                 pipeline = [
-                    {
-                        '$unwind': f'${coll_name}'
-                    }, {
-                        '$group': {
-                            '_id': f'${coll_name}'
-                        }
-                    },
-                    {
-                        '$project': project_query
-                    },
-                    {
-                        '$group': {
-                            '_id': group_query
-                        }
-                    }, {
-                        '$count': 'uniqueCount'
-                    }
+                    {"$unwind": f"${coll_name}"},
+                    {"$group": {"_id": f"${coll_name}"}},
+                    {"$project": project_query},
+                    {"$group": {"_id": group_query}},
+                    {"$count": "uniqueCount"},
                 ]
 
                 unique_values = collection.aggregate(pipeline)
-                result = list(unique_values)[0]['uniqueCount']
+                result = list(unique_values)[0]["uniqueCount"]
                 uniqueness = result / total_documents
 
                 if uniqueness == 1.0:
-                    candidate_key.append(','.join(rem_fields))
+                    candidate_key.append(",".join(rem_fields))
 
         client.close()
 
         return candidate_key
 
-    def check_key_in_other_collection(
-            cls,
-            src_key: str,
-            src_coll: str) -> bool:
+    def check_key_in_other_collection(cls, src_key: str, src_coll: str) -> bool:
 
         res = {}
 
@@ -610,13 +499,7 @@ class MongoDB(BaseModel):
         for c in collections:
             fields = cls.collections[c]
             for field in fields:
-                pipeline = [
-                    {
-                        "$project": {
-                            f"{src_key}": 1
-                        }
-                    }
-                ]
+                pipeline = [{"$project": {f"{src_key}": 1}}]
 
                 values = list(source_coll.aggregate(pipeline))
 
@@ -656,11 +539,11 @@ class MongoDB(BaseModel):
 
         for coll in collections:
             for field in cls.collections[coll]:
-                if field.name == src_coll and (field.data_type == MongoType.OBJECT or field.data_type == MongoType.ARRAY_OF_OBJECT):
-                    return {
-                        "name": coll,
-                        "data_type": field.data_type
-                    }
+                if field.name == src_coll and (
+                    field.data_type == MongoType.OBJECT
+                    or field.data_type == MongoType.ARRAY_OF_OBJECT
+                ):
+                    return {"name": coll, "data_type": field.data_type}
 
         return None
 
@@ -672,14 +555,17 @@ class MongoDB(BaseModel):
 
         for coll in collections:
             for field in cls.collections[coll]:
-                if field.name == src_coll and (field.data_type == MongoType.OBJECT or field.data_type == MongoType.ARRAY_OF_OBJECT):
+                if field.name == src_coll and (
+                    field.data_type == MongoType.OBJECT
+                    or field.data_type == MongoType.ARRAY_OF_OBJECT
+                ):
 
                     deeper_check = cls.check_parent_collection(coll)
                     if deeper_check:
-                        return coll + '.' + deeper_check
+                        return coll + "." + deeper_check
                     return coll
 
-        return ''
+        return ""
 
     def check_parent_field(cls, field_name: str) -> str:
 
@@ -687,10 +573,17 @@ class MongoDB(BaseModel):
 
         for coll in collections:
             for field in cls.collections[coll]:
-                if field.name == field_name and (field.data_type == MongoType.ARRAY_OF_STRING or field.data_type == MongoType.ARRAY_OF_BIG_INT or field.data_type == MongoType.ARRAY_OF_FLOAT or field.data_type == MongoType.ARRAY_OF_NUM or field.data_type == MongoType.ARRAY_OF_DATE or field.data_type == MongoType.ARRAY_OF_OID):
+                if field.name == field_name and (
+                    field.data_type == MongoType.ARRAY_OF_STRING
+                    or field.data_type == MongoType.ARRAY_OF_BIG_INT
+                    or field.data_type == MongoType.ARRAY_OF_FLOAT
+                    or field.data_type == MongoType.ARRAY_OF_NUM
+                    or field.data_type == MongoType.ARRAY_OF_DATE
+                    or field.data_type == MongoType.ARRAY_OF_OID
+                ):
                     return coll, field.data_type
 
-        return '',''
+        return "", ""
 
     def check_shortest_candidate_key(cls, candidate_key) -> str:
 
@@ -730,7 +623,10 @@ class MongoDB(BaseModel):
 
                 for f in candidate_key:
 
-                    if len(f.split(',')) == 1 and cls.check_key_type(f, coll_name) == "oid":
+                    if (
+                        len(f.split(",")) == 1
+                        and cls.check_key_type(f, coll_name) == "oid"
+                    ):
                         return f
 
                     elif cls.check_shortest_candidate_key(candidate_key) == f:
@@ -742,7 +638,10 @@ class MongoDB(BaseModel):
 
                 for f in candidate_key:
 
-                    if len(f.split(',')) == 1 and cls.check_key_type(f, coll_name) == "oid":
+                    if (
+                        len(f.split(",")) == 1
+                        and cls.check_key_type(f, coll_name) == "oid"
+                    ):
                         return f
 
                     elif cls.check_shortest_candidate_key(candidate_key) == f:
@@ -763,17 +662,31 @@ class MongoDB(BaseModel):
 
                 for f in field:
 
-                    field_2 = list(filter(lambda x: x.name == coll, cls.collections[coll_name]))
+                    field_2 = list(
+                        filter(lambda x: x.name == coll, cls.collections[coll_name])
+                    )
 
                     if len(field_2) > 0:
 
                         cardinality = Cardinalities(
                             source=coll_name,
                             destination=coll,
-                            type=CardinalitiesType.MANY_TO_MANY
+                            type=CardinalitiesType.MANY_TO_MANY,
                         )
 
-                        if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                        if not any(
+                            (
+                                (
+                                    d.source == cardinality.source
+                                    and d.destination == cardinality.destination
+                                )
+                                or (
+                                    d.source == cardinality.destination
+                                    and d.destination == cardinality.source
+                                )
+                            )
+                            for d in res
+                        ):
                             res.append(cardinality)
 
                     else:
@@ -785,10 +698,22 @@ class MongoDB(BaseModel):
                                 cardinality = Cardinalities(
                                     source=coll,
                                     destination=coll_name,
-                                    type=CardinalitiesType.ONE_TO_ONE
+                                    type=CardinalitiesType.ONE_TO_ONE,
                                 )
 
-                                if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                                if not any(
+                                    (
+                                        (
+                                            d.source == cardinality.source
+                                            and d.destination == cardinality.destination
+                                        )
+                                        or (
+                                            d.source == cardinality.destination
+                                            and d.destination == cardinality.source
+                                        )
+                                    )
+                                    for d in res
+                                ):
                                     res.append(cardinality)
 
                             else:
@@ -796,10 +721,22 @@ class MongoDB(BaseModel):
                                 cardinality = Cardinalities(
                                     source=coll_name,
                                     destination=coll,
-                                    type=CardinalitiesType.ONE_TO_MANY
+                                    type=CardinalitiesType.ONE_TO_MANY,
                                 )
 
-                                if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                                if not any(
+                                    (
+                                        (
+                                            d.source == cardinality.source
+                                            and d.destination == cardinality.destination
+                                        )
+                                        or (
+                                            d.source == cardinality.destination
+                                            and d.destination == cardinality.source
+                                        )
+                                    )
+                                    for d in res
+                                ):
                                     res.append(cardinality)
 
                         elif f.data_type == MongoType.ARRAY_OF_OBJECT:
@@ -809,10 +746,22 @@ class MongoDB(BaseModel):
                                 cardinality = Cardinalities(
                                     source=coll,
                                     destination=coll_name,
-                                    type=CardinalitiesType.ONE_TO_MANY
+                                    type=CardinalitiesType.ONE_TO_MANY,
                                 )
 
-                                if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                                if not any(
+                                    (
+                                        (
+                                            d.source == cardinality.source
+                                            and d.destination == cardinality.destination
+                                        )
+                                        or (
+                                            d.source == cardinality.destination
+                                            and d.destination == cardinality.source
+                                        )
+                                    )
+                                    for d in res
+                                ):
                                     res.append(cardinality)
 
                             else:
@@ -820,49 +769,99 @@ class MongoDB(BaseModel):
                                 cardinality = Cardinalities(
                                     source=coll,
                                     destination=coll_name,
-                                    type=CardinalitiesType.MANY_TO_MANY
+                                    type=CardinalitiesType.MANY_TO_MANY,
                                 )
 
-                                if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                                if not any(
+                                    (
+                                        (
+                                            d.source == cardinality.source
+                                            and d.destination == cardinality.destination
+                                        )
+                                        or (
+                                            d.source == cardinality.destination
+                                            and d.destination == cardinality.source
+                                        )
+                                    )
+                                    for d in res
+                                ):
                                     res.append(cardinality)
 
-                        elif f.data_type == MongoType.ARRAY_OF_STRING or f.data_type == MongoType.ARRAY_OF_BIG_INT or f.data_type == MongoType.ARRAY_OF_FLOAT or f.data_type == MongoType.ARRAY_OF_NUM or f.data_type == MongoType.ARRAY_OF_DATE or f.data_type == MongoType.ARRAY_OF_OID:
+                        elif (
+                            f.data_type == MongoType.ARRAY_OF_STRING
+                            or f.data_type == MongoType.ARRAY_OF_BIG_INT
+                            or f.data_type == MongoType.ARRAY_OF_FLOAT
+                            or f.data_type == MongoType.ARRAY_OF_NUM
+                            or f.data_type == MongoType.ARRAY_OF_DATE
+                            or f.data_type == MongoType.ARRAY_OF_OID
+                        ):
 
                             cardinality = None
                             if f.unique is True:
                                 cardinality = Cardinalities(
                                     source=coll,
                                     destination=coll_name,
-                                    type=CardinalitiesType.ONE_TO_MANY
+                                    type=CardinalitiesType.ONE_TO_MANY,
                                 )
                             else:
                                 cardinality = Cardinalities(
                                     source=coll,
                                     destination=coll_name,
-                                    type=CardinalitiesType.MANY_TO_MANY
+                                    type=CardinalitiesType.MANY_TO_MANY,
                                 )
 
-                            if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                            if not any(
+                                (
+                                    (
+                                        d.source == cardinality.source
+                                        and d.destination == cardinality.destination
+                                    )
+                                    or (
+                                        d.source == cardinality.destination
+                                        and d.destination == cardinality.source
+                                    )
+                                )
+                                for d in res
+                            ):
                                 res.append(cardinality)
 
         for f in cls.collections[coll_name]:
 
-            if f.data_type == MongoType.ARRAY_OF_STRING or f.data_type == MongoType.ARRAY_OF_BIG_INT or f.data_type == MongoType.ARRAY_OF_FLOAT or f.data_type == MongoType.ARRAY_OF_NUM or f.data_type == MongoType.ARRAY_OF_DATE or f.data_type == MongoType.ARRAY_OF_OID:
+            if (
+                f.data_type == MongoType.ARRAY_OF_STRING
+                or f.data_type == MongoType.ARRAY_OF_BIG_INT
+                or f.data_type == MongoType.ARRAY_OF_FLOAT
+                or f.data_type == MongoType.ARRAY_OF_NUM
+                or f.data_type == MongoType.ARRAY_OF_DATE
+                or f.data_type == MongoType.ARRAY_OF_OID
+            ):
                 cardinality = None
                 if f.unique is True:
                     cardinality = Cardinalities(
                         source=coll_name,
                         destination=f.name,
-                        type=CardinalitiesType.ONE_TO_MANY
+                        type=CardinalitiesType.ONE_TO_MANY,
                     )
                 else:
                     cardinality = Cardinalities(
                         source=coll_name,
                         destination=f.name,
-                        type=CardinalitiesType.MANY_TO_MANY
+                        type=CardinalitiesType.MANY_TO_MANY,
                     )
 
-                if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                if not any(
+                    (
+                        (
+                            d.source == cardinality.source
+                            and d.destination == cardinality.destination
+                        )
+                        or (
+                            d.source == cardinality.destination
+                            and d.destination == cardinality.source
+                        )
+                    )
+                    for d in res
+                ):
                     res.append(cardinality)
 
             elif f.data_type == MongoType.OBJECT:
@@ -872,10 +871,22 @@ class MongoDB(BaseModel):
                     cardinality = Cardinalities(
                         source=f.name,
                         destination=coll_name,
-                        type=CardinalitiesType.ONE_TO_ONE
+                        type=CardinalitiesType.ONE_TO_ONE,
                     )
 
-                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                    if not any(
+                        (
+                            (
+                                d.source == cardinality.source
+                                and d.destination == cardinality.destination
+                            )
+                            or (
+                                d.source == cardinality.destination
+                                and d.destination == cardinality.source
+                            )
+                        )
+                        for d in res
+                    ):
                         res.append(cardinality)
 
                 else:
@@ -883,10 +894,22 @@ class MongoDB(BaseModel):
                     cardinality = Cardinalities(
                         source=coll_name,
                         destination=f.name,
-                        type=CardinalitiesType.ONE_TO_MANY
+                        type=CardinalitiesType.ONE_TO_MANY,
                     )
 
-                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                    if not any(
+                        (
+                            (
+                                d.source == cardinality.source
+                                and d.destination == cardinality.destination
+                            )
+                            or (
+                                d.source == cardinality.destination
+                                and d.destination == cardinality.source
+                            )
+                        )
+                        for d in res
+                    ):
                         res.append(cardinality)
 
             elif f.data_type == MongoType.ARRAY_OF_OBJECT:
@@ -896,10 +919,22 @@ class MongoDB(BaseModel):
                     cardinality = Cardinalities(
                         source=coll_name,
                         destination=f.name,
-                        type=CardinalitiesType.ONE_TO_MANY
+                        type=CardinalitiesType.ONE_TO_MANY,
                     )
 
-                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                    if not any(
+                        (
+                            (
+                                d.source == cardinality.source
+                                and d.destination == cardinality.destination
+                            )
+                            or (
+                                d.source == cardinality.destination
+                                and d.destination == cardinality.source
+                            )
+                        )
+                        for d in res
+                    ):
                         res.append(cardinality)
 
                 else:
@@ -907,10 +942,22 @@ class MongoDB(BaseModel):
                     cardinality = Cardinalities(
                         source=coll_name,
                         destination=f.name,
-                        type=CardinalitiesType.MANY_TO_MANY
+                        type=CardinalitiesType.MANY_TO_MANY,
                     )
 
-                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                    if not any(
+                        (
+                            (
+                                d.source == cardinality.source
+                                and d.destination == cardinality.destination
+                            )
+                            or (
+                                d.source == cardinality.destination
+                                and d.destination == cardinality.source
+                            )
+                        )
+                        for d in res
+                    ):
                         res.append(cardinality)
 
         primary_key = cls.get_primary_key(coll_name)
@@ -919,7 +966,12 @@ class MongoDB(BaseModel):
 
         if check_key["status"] is True:
 
-            field = list(filter(lambda x: x.name == check_key["field"], cls.collections[check_key["collection"]]))
+            field = list(
+                filter(
+                    lambda x: x.name == check_key["field"],
+                    cls.collections[check_key["collection"]],
+                )
+            )
 
             for f in field:
 
@@ -928,10 +980,22 @@ class MongoDB(BaseModel):
                     cardinality = Cardinalities(
                         source=coll_name,
                         destination=check_key["collection"],
-                        type=CardinalitiesType.ONE_TO_ONE
+                        type=CardinalitiesType.ONE_TO_ONE,
                     )
 
-                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                    if not any(
+                        (
+                            (
+                                d.source == cardinality.source
+                                and d.destination == cardinality.destination
+                            )
+                            or (
+                                d.source == cardinality.destination
+                                and d.destination == cardinality.source
+                            )
+                        )
+                        for d in res
+                    ):
                         res.append(cardinality)
 
                 else:
@@ -939,10 +1003,22 @@ class MongoDB(BaseModel):
                     cardinality = Cardinalities(
                         source=coll_name,
                         destination=check_key["collection"],
-                        type=CardinalitiesType.ONE_TO_MANY
+                        type=CardinalitiesType.ONE_TO_MANY,
                     )
 
-                    if not any(((d.source == cardinality.source and d.destination == cardinality.destination) or (d.source == cardinality.destination and d.destination == cardinality.source)) for d in res):
+                    if not any(
+                        (
+                            (
+                                d.source == cardinality.source
+                                and d.destination == cardinality.destination
+                            )
+                            or (
+                                d.source == cardinality.destination
+                                and d.destination == cardinality.source
+                            )
+                        )
+                        for d in res
+                    ):
                         res.append(cardinality)
 
         return res
@@ -958,7 +1034,16 @@ class MongoDB(BaseModel):
 
             for card in cardinalities:
 
-                if not any(((d.source == card.source and d.destination == card.destination) or (d.source == card.destination and d.destination == card.source)) for d in res):
+                if not any(
+                    (
+                        (d.source == card.source and d.destination == card.destination)
+                        or (
+                            d.source == card.destination
+                            and d.destination == card.source
+                        )
+                    )
+                    for d in res
+                ):
                     res.append(card)
 
         return res
@@ -987,26 +1072,29 @@ class MongoDB(BaseModel):
             summary[coll] = {}
             for key, value in final_schema[coll].items():
 
-                if 'array_type' in value:
-                    if value['array_type'] == 'OBJECT':
-                        nested_object_summary = {sub_key: sub_value['type'] for sub_key, sub_value in value['object'].items()}
+                if "array_type" in value:
+                    if value["array_type"] == "OBJECT":
+                        nested_object_summary = {
+                            sub_key: sub_value["type"]
+                            for sub_key, sub_value in value["object"].items()
+                        }
                         summary[coll][key] = [nested_object_summary]
                     else:
-                        summary[coll][key] = [value['array_type']]
+                        summary[coll][key] = [value["array_type"]]
 
-                elif 'object' in value:
-                    summary[coll][key] = {sub_key: sub_value['type'] for sub_key, sub_value in value['object'].items()}
+                elif "object" in value:
+                    summary[coll][key] = {
+                        sub_key: sub_value["type"]
+                        for sub_key, sub_value in value["object"].items()
+                    }
                 else:
-                    summary[coll][key] = value['type']
+                    summary[coll][key] = value["type"]
 
         return summary
 
-    def get_data_by_collection(cls, relation: dict, cardinality_type: CardinalitiesType):
-
-        '''
-        -   for many-to-many need to populate data 
-            after migrating data to parent relation done
-        '''
+    def get_data_by_collection(
+        cls, relation: dict, cardinality_type: CardinalitiesType
+    ):
 
         client = cls.create_client()
         db = client[cls.db]
@@ -1050,21 +1138,16 @@ class MongoDB(BaseModel):
                 for i in fields:
 
                     if i.split(".")[0] == coll_2:
-                        project_query[i.split(".")[-1]] = f'${coll_2}'
+                        project_query[i.split(".")[-1]] = f"${coll_2}"
 
                     else:
                         field = i.split(".")[-1]
-                        field_name = i.replace(f"{coll_1}.{coll_1}_","")
-                        project_query[field] = f'${field_name}'
+                        field_name = i.replace(f"{coll_1}.{coll_1}_", "")
+                        project_query[field] = f"${field_name}"
 
                 query = [
-                    {
-                        '$unwind': {
-                            'path': f'${coll_2}'
-                        }
-                    }, {
-                        '$project': project_query
-                    }
+                    {"$unwind": {"path": f"${coll_2}"}},
+                    {"$project": project_query},
                 ]
 
                 coll = db[coll_1]
@@ -1073,30 +1156,23 @@ class MongoDB(BaseModel):
 
                 data = list(docs)
 
-            elif coll_2_parent_field[0] == coll_1 and coll_1_parent_field[0] == "" and coll_1_parent_coll == "":
+            elif (
+                coll_2_parent_field[0] == coll_1
+                and coll_1_parent_field[0] == ""
+                and coll_1_parent_coll == ""
+            ):
 
                 project_query = {}
                 project_query["_id"] = 0
                 for i in fields:
                     if i.split(".")[0] == coll_2:
-                        project_query[coll_2] = f"$_id"
+                        project_query[coll_2] = "$_id"
 
                 query = [
-                    {
-                        '$unwind': {
-                            'path': f'${coll_2}'
-                        }
-                    }, {
-                        '$group': {
-                            '_id': f'${coll_2}'
-                        }
-                    }, {
-                        '$sort': {
-                            '_id': 1
-                        }
-                    },{
-                        '$project': project_query
-                    }
+                    {"$unwind": {"path": f"${coll_2}"}},
+                    {"$group": {"_id": f"${coll_2}"}},
+                    {"$sort": {"_id": 1}},
+                    {"$project": project_query},
                 ]
 
                 coll = db[coll_1]
@@ -1104,24 +1180,21 @@ class MongoDB(BaseModel):
                 datas = list(docs)
                 value_id = {}
                 for i in range(0, len(datas)):
-                    value_id[datas[i][coll_2]] = i+1
+                    value_id[datas[i][coll_2]] = i + 1
 
                 project_query = {}
                 project_query["_id"] = 0
                 for i in fields:
                     if i.split(".")[0] == coll_2_parent_field[0]:
-                        project_query[i.split(".")[-1]] = f'${i.replace(f"{coll_2_parent_field[0]}.{coll_2_parent_field[0]}_","")}'
+                        project_query[i.split(".")[-1]] = (
+                            f'${i.replace(f"{coll_2_parent_field[0]}.{coll_2_parent_field[0]}_","")}'
+                        )
                     else:
                         project_query[f'{i.split(".")[-1]}'] = f'${i.split(".")[0]}'
 
                 query = [
-                    {
-                        '$unwind': {
-                            'path': f'${coll_2}'
-                        }
-                    }, {
-                        '$project': project_query
-                    }
+                    {"$unwind": {"path": f"${coll_2}"}},
+                    {"$project": project_query},
                 ]
 
                 coll = db[coll_1]
@@ -1142,29 +1215,32 @@ class MongoDB(BaseModel):
 
                     data.append(res)
 
-            elif coll_2_parent_coll == coll_1 and coll_1_parent_field[0] == "" and coll_1_parent_coll == "":
+            elif (
+                coll_2_parent_coll == coll_1
+                and coll_1_parent_field[0] == ""
+                and coll_1_parent_coll == ""
+            ):
 
                 project_query = {}
                 project_query["_id"] = 0
 
                 for i in fields:
-    
+
                     if i.split(".")[0] == coll_2_parent_coll:
-                        project_query[i.split(".")[-1]] = f'${i.replace(f"{coll_2_parent_coll}.{coll_2_parent_coll}_","")}'
-                    
+                        project_query[i.split(".")[-1]] = (
+                            f'${i.replace(f"{coll_2_parent_coll}.{coll_2_parent_coll}_","")}'
+                        )
+
                     else:
                         field_name = i.split(".")[-1]
                         coll_name = i.split(".")[0]
-                        project_query[field_name] = f'${coll_name}.{field_name.replace(f"{coll_name}_","")}'
+                        project_query[field_name] = (
+                            f'${coll_name}.{field_name.replace(f"{coll_name}_","")}'
+                        )
 
                 query = [
-                    {
-                        '$unwind': {
-                            'path': f'${coll_2}'
-                        }
-                    }, {
-                        '$project': project_query
-                    }
+                    {"$unwind": {"path": f"${coll_2}"}},
+                    {"$project": project_query},
                 ]
 
                 coll = db[coll_1]
@@ -1179,23 +1255,20 @@ class MongoDB(BaseModel):
                 project_query["_id"] = 0
 
                 for i in fields:
-    
+
                     if i.split(".")[0] == coll_1:
-                        project_query[i.split(".")[-1]] = f'${i.replace(f"{coll_1}.{coll_1}_","")}'
+                        project_query[i.split(".")[-1]] = (
+                            f'${i.replace(f"{coll_1}.{coll_1}_","")}'
+                        )
 
                     else:
                         field_name = i.split(".")[-1]
                         coll_name = i.split(".")[0]
-                        project_query[field_name] = f'${coll_name}'
+                        project_query[field_name] = f"${coll_name}"
 
                 query = [
-                    {
-                        '$unwind': {
-                            'path': f'${coll_2}'
-                        }
-                    }, {
-                        '$project': project_query
-                    }
+                    {"$unwind": {"path": f"${coll_2}"}},
+                    {"$project": project_query},
                 ]
 
                 coll = db[coll_1]
@@ -1209,22 +1282,20 @@ class MongoDB(BaseModel):
             if parent_coll != "":
 
                 if coll_data_type is not None and coll_data_type == MongoType.OBJECT:
-                    
+
                     if cardinality_type == CardinalitiesType.ONE_TO_ONE:
 
                         project_query = {}
-                        project_query['_id'] = 0
+                        project_query["_id"] = 0
                         for i in fields:
                             if i.split(".")[0] == parent_coll:
-                                project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
+                                project_query[i.split(".")[-1]] = (
+                                    f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
+                                )
                             else:
-                                project_query[i] = f'${coll_name}.{i}'
+                                project_query[i] = f"${coll_name}.{i}"
 
-                        query = [
-                            {
-                                '$project': project_query
-                            }
-                        ]
+                        query = [{"$project": project_query}]
 
                         coll = db[parent_coll]
 
@@ -1237,16 +1308,11 @@ class MongoDB(BaseModel):
                         project_query = {}
                         project_query["_id"] = 0
                         for i in fields:
-                            project_query[i] = f'$_id.{i}'
+                            project_query[i] = f"$_id.{i}"
 
                         query = [
-                            {
-                                '$group': {
-                                    '_id':  f"${coll_name}"
-                                }
-                            }, {
-                                '$project': project_query
-                            }
+                            {"$group": {"_id": f"${coll_name}"}},
+                            {"$project": project_query},
                         ]
 
                         coll = db[parent_coll]
@@ -1255,26 +1321,26 @@ class MongoDB(BaseModel):
 
                         data = list(docs)
 
-                elif coll_data_type is not None and coll_data_type == MongoType.ARRAY_OF_OBJECT:
+                elif (
+                    coll_data_type is not None
+                    and coll_data_type == MongoType.ARRAY_OF_OBJECT
+                ):
 
                     if cardinality_type == CardinalitiesType.ONE_TO_MANY:
 
                         project_query = {}
-                        project_query['_id'] = 0
+                        project_query["_id"] = 0
                         for i in fields:
                             if i.split(".")[0] == parent_coll:
-                                project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
+                                project_query[i.split(".")[-1]] = (
+                                    f'${i.replace(f"{parent_coll}.{parent_coll}_","")}'
+                                )
                             else:
-                                project_query[i] = f'${coll_name}.{i}'
+                                project_query[i] = f"${coll_name}.{i}"
 
                         query = [
-                            {
-                                '$unwind': {
-                                    'path': f'${coll_name}'
-                                }
-                            }, {
-                                '$project': project_query
-                            }
+                            {"$unwind": {"path": f"${coll_name}"}},
+                            {"$project": project_query},
                         ]
 
                         coll = db[parent_coll]
@@ -1282,26 +1348,18 @@ class MongoDB(BaseModel):
                         docs = coll.aggregate(query)
 
                         data = list(docs)
-                    
+
                     elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
 
                         project_query = {}
-                        project_query['_id'] = 0
+                        project_query["_id"] = 0
                         for i in fields:
-                            project_query[i] = f'$_id.{i}'
+                            project_query[i] = f"$_id.{i}"
 
                         query = [
-                            {
-                                '$unwind': {
-                                    'path': f'${coll_name}'
-                                }
-                            }, {
-                                '$group': {
-                                    '_id': f'${coll_name}'
-                                }
-                            }, {
-                                '$project': project_query
-                            }
+                            {"$unwind": {"path": f"${coll_name}"}},
+                            {"$group": {"_id": f"${coll_name}"}},
+                            {"$project": project_query},
                         ]
 
                         coll = db[parent_coll]
@@ -1310,7 +1368,14 @@ class MongoDB(BaseModel):
 
                         data = list(docs)
 
-            elif parent_field is not None and (field_type == MongoType.ARRAY_OF_STRING or field_type == MongoType.ARRAY_OF_BIG_INT or field_type == MongoType.ARRAY_OF_FLOAT or field_type == MongoType.ARRAY_OF_NUM or field_type == MongoType.ARRAY_OF_DATE or field_type == MongoType.ARRAY_OF_OID):
+            elif parent_field is not None and (
+                field_type == MongoType.ARRAY_OF_STRING
+                or field_type == MongoType.ARRAY_OF_BIG_INT
+                or field_type == MongoType.ARRAY_OF_FLOAT
+                or field_type == MongoType.ARRAY_OF_NUM
+                or field_type == MongoType.ARRAY_OF_DATE
+                or field_type == MongoType.ARRAY_OF_OID
+            ):
 
                 if cardinality_type == CardinalitiesType.ONE_TO_MANY:
 
@@ -1319,40 +1384,38 @@ class MongoDB(BaseModel):
                     lookup_query = {}
 
                     for i in fields:
-                        
+
                         if i.split(".")[0] == parent_field:
 
                             if coll_name in cls.collections:
 
                                 lookup_query = {
-                                    'from': f'{coll_name}',
-                                    'localField': f'{coll_name}',
-                                    'foreignField': f'{i.replace(f"{parent_field}.{parent_field}_","")}',
-                                    'as': f'{coll_name}'
-                                } 
+                                    "from": f"{coll_name}",
+                                    "localField": f"{coll_name}",
+                                    "foreignField": f'{i.replace(f"{parent_field}.{parent_field}_","")}',
+                                    "as": f"{coll_name}",
+                                }
 
-                            project_query[i.split(".")[-1]] = f'${i.replace(f"{parent_field}.{parent_field}_","")}'
-                        
+                            project_query[i.split(".")[-1]] = (
+                                f'${i.replace(f"{parent_field}.{parent_field}_","")}'
+                            )
+
                         elif "_value" in i:
 
-                            project_query[i] = f'${coll_name}'
+                            project_query[i] = f"${coll_name}"
 
                         else:
 
-                            project_query[i] = f'${coll_name}.{i}'
+                            project_query[i] = f"${coll_name}.{i}"
 
                     pipeline = []
 
                     if lookup_query != {}:
-                        pipeline.append({'$lookup': lookup_query})
+                        pipeline.append({"$lookup": lookup_query})
 
                     pipeline += [
-                        {
-                            "$unwind": f"${coll_name}"
-                        },
-                        {
-                            "$project": project_query
-                        }
+                        {"$unwind": f"${coll_name}"},
+                        {"$project": project_query},
                     ]
 
                     coll = db[parent_field]
@@ -1360,23 +1423,18 @@ class MongoDB(BaseModel):
                     docs = coll.aggregate(pipeline)
 
                     data = list(docs)
-                
+
                 elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
 
                     if coll_name in cls.collections:
 
                         project_query = {}
                         for i in fields:
-                            project_query[i] = f'$_id.{i}'
+                            project_query[i] = f"$_id.{i}"
 
                         query = [
-                            {
-                                '$group': {
-                                    '_id': relation[coll_name]
-                                }
-                            }, {
-                                '$project': project_query
-                            }
+                            {"$group": {"_id": relation[coll_name]}},
+                            {"$project": project_query},
                         ]
 
                         coll = db[coll_name]
@@ -1384,33 +1442,22 @@ class MongoDB(BaseModel):
                         docs = coll.aggregate(query)
 
                         data = list(docs)
-                    
+
                     else:
 
                         project_query = {}
                         project_query["_id"] = 0
                         for i in fields:
                             if i.split("_")[0] == coll_name:
-                                project_query[i] = f"$_id"
+                                project_query[i] = "$_id"
                             else:
                                 project_query[i] = f"${i}"
-                        
+
                         query = [
-                            {
-                                '$unwind': {
-                                    'path': f'${coll_name}'
-                                }
-                            }, {
-                                '$group': {
-                                    '_id': f'${coll_name}'
-                                }
-                            }, {
-                                '$sort': {
-                                    '_id': 1
-                                }
-                            }, {
-                                '$project': project_query
-                            }
+                            {"$unwind": {"path": f"${coll_name}"}},
+                            {"$group": {"_id": f"${coll_name}"}},
+                            {"$sort": {"_id": 1}},
+                            {"$project": project_query},
                         ]
 
                         coll = db[parent_field]
@@ -1423,7 +1470,7 @@ class MongoDB(BaseModel):
 
                         for i in range(0, len(datas)):
                             value = datas[i]
-                            value['id'] = i+1
+                            value["id"] = i + 1
                             data.append(value)
 
                 else:
@@ -1432,16 +1479,11 @@ class MongoDB(BaseModel):
 
                         project_query = {}
                         for i in fields:
-                            project_query[i] = f'$_id.{i}'
+                            project_query[i] = f"$_id.{i}"
 
                         query = [
-                            {
-                                '$group': {
-                                    '_id': relation[coll_name]
-                                }
-                            }, {
-                                '$project': project_query
-                            }
+                            {"$group": {"_id": relation[coll_name]}},
+                            {"$project": project_query},
                         ]
 
                         coll = db[coll_name]
@@ -1455,21 +1497,19 @@ class MongoDB(BaseModel):
                 if cardinality_type == CardinalitiesType.ONE_TO_MANY:
 
                     project_query = {}
-                    project_query['_id'] = 0
+                    project_query["_id"] = 0
                     for i in fields:
                         field = i.split(".")
                         if len(field) > 1:
                             coll = field[0]
-                            field_name = field[-1].replace(f"{coll}_","")
-                            project_query[f'{coll}_{field_name}'] = f'${f"{coll}.{field_name}"}'
+                            field_name = field[-1].replace(f"{coll}_", "")
+                            project_query[f"{coll}_{field_name}"] = (
+                                f'${f"{coll}.{field_name}"}'
+                            )
                         else:
-                            project_query[i] = f'${i}'
+                            project_query[i] = f"${i}"
 
-                    query = [
-                        {
-                            '$project': project_query
-                        }
-                    ]
+                    query = [{"$project": project_query}]
 
                     coll = db[coll_name]
 
@@ -1481,16 +1521,11 @@ class MongoDB(BaseModel):
 
                     project_query = {}
                     for i in fields:
-                        project_query[i] = f'$_id.{i}'
+                        project_query[i] = f"$_id.{i}"
 
                     query = [
-                        {
-                            '$group': {
-                                '_id': relation[coll_name]
-                            }
-                        }, {
-                            '$project': project_query
-                        }
+                        {"$group": {"_id": relation[coll_name]}},
+                        {"$project": project_query},
                     ]
 
                     coll = db[coll_name]

@@ -2,7 +2,7 @@ from enum import Enum
 
 
 class MongoType(str, Enum):
-    NULL = 'null'
+    NULL = "null"
     BOOL = "boolean"
     INTEGER = "integer"
     BIG_INT = "biginteger"

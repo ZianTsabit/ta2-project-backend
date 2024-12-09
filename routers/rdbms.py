@@ -9,60 +9,50 @@ from models.mysql.mysql import MySQL
 from models.postgresql.postgresql import PostgreSQL
 from models.rdbms.rdbms import Rdbms
 
-router = APIRouter(
-    prefix="/api/rdbms",
-    tags=["rdbms"]
-)
+router = APIRouter(prefix="/api/rdbms", tags=["rdbms"])
 
 
 @router.get("/")
 async def root_rdbms():
 
     return JSONResponse(
-        content={"message": "RDBMS Routers"},
-        status_code=status.HTTP_200_OK
+        content={"message": "RDBMS Routers"}, status_code=status.HTTP_200_OK
     )
 
 
 @router.post("/test-connection")
 async def test_connection(rdbms_type: str, rdbms: Rdbms):
     connection_status = False
-    if rdbms_type == 'postgresql':
+    if rdbms_type == "postgresql":
         postgresql = PostgreSQL(
             host=rdbms.host,
             port=rdbms.port,
             db=rdbms.db,
             username=rdbms.username,
-            password=rdbms.password
+            password=rdbms.password,
         )
         connection_status = postgresql.test_connection()
 
-    elif rdbms_type == 'mysql':
+    elif rdbms_type == "mysql":
         mysql = MySQL(
             host=rdbms.host,
             port=rdbms.port,
             db=rdbms.db,
             username=rdbms.username,
-            password=rdbms.password
+            password=rdbms.password,
         )
         connection_status = mysql.test_connection()
 
     if connection_status:
         return JSONResponse(
-            content={
-                "status": connection_status,
-                "message": "connection success"
-            },
-            status_code=status.HTTP_200_OK
+            content={"status": connection_status, "message": "connection success"},
+            status_code=status.HTTP_200_OK,
         )
 
     else:
         return JSONResponse(
-            content={
-                "status": connection_status,
-                "message": "connection failed"
-            },
-            status_code=status.HTTP_200_OK
+            content={"status": connection_status, "message": "connection failed"},
+            status_code=status.HTTP_200_OK,
         )
 
 
@@ -73,13 +63,13 @@ async def display_schema(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
     collections = mongodb.get_collections()
     cardinalities = mongodb.mapping_all_cardinalities()
 
-    if rdbms_type == 'postgresql':
+    if rdbms_type == "postgresql":
         postgresql = PostgreSQL(
             host=rdbms.host,
             port=rdbms.port,
             db=rdbms.db,
             username=rdbms.username,
-            password=rdbms.password
+            password=rdbms.password,
         )
         postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
         postgresql.process_collection(mongodb, collections)
@@ -88,13 +78,13 @@ async def display_schema(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
 
         ddl = postgresql.generate_ddl(schema)
 
-    elif rdbms_type == 'mysql':
+    elif rdbms_type == "mysql":
         mysql = MySQL(
             host=rdbms.host,
             port=rdbms.port,
             db=rdbms.db,
             username=rdbms.username,
-            password=rdbms.password
+            password=rdbms.password,
         )
         mysql.process_mapping_cardinalities(mongodb, collections, cardinalities)
         mysql.process_collection(mongodb, collections)
@@ -105,13 +95,10 @@ async def display_schema(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
 
     if ddl != "":
         return JSONResponse(
-            content=jsonable_encoder(ddl),
-            status_code=status.HTTP_201_CREATED
+            content=jsonable_encoder(ddl), status_code=status.HTTP_201_CREATED
         )
     else:
-        return Response(
-            status_code=status.HTTP_204_NO_CONTENT
-        )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/implement-schema")
@@ -122,13 +109,13 @@ async def implement_schema(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
     collections = mongodb.get_collections()
     cardinalities = mongodb.mapping_all_cardinalities()
 
-    if rdbms_type == 'postgresql':
+    if rdbms_type == "postgresql":
         postgresql = PostgreSQL(
             host=rdbms.host,
             port=rdbms.port,
             db=rdbms.db,
             username=rdbms.username,
-            password=rdbms.password
+            password=rdbms.password,
         )
         postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
         postgresql.process_collection(mongodb, collections)
@@ -140,13 +127,13 @@ async def implement_schema(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
         if ddl != "":
             success = postgresql.execute_query(ddl)
 
-    elif rdbms_type == 'mysql':
+    elif rdbms_type == "mysql":
         mysql = MySQL(
             host=rdbms.host,
             port=rdbms.port,
             db=rdbms.db,
             username=rdbms.username,
-            password=rdbms.password
+            password=rdbms.password,
         )
         mysql.process_mapping_cardinalities(mongodb, collections, cardinalities)
         mysql.process_collection(mongodb, collections)
@@ -160,59 +147,48 @@ async def implement_schema(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
 
     if success is True:
         return JSONResponse(
-            content=jsonable_encoder(success),
-            status_code=status.HTTP_201_CREATED
+            content=jsonable_encoder(success), status_code=status.HTTP_201_CREATED
         )
     else:
-        return Response(
-            status_code=status.HTTP_204_NO_CONTENT
-        )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/migrate-data")
 async def migrate_data(rdbms_type: str, rdbms: Rdbms, mongodb: MongoDB):
-    ddl = ""
     success = False
     mongodb.init_collection()
     collections = mongodb.get_collections()
     cardinalities = mongodb.mapping_all_cardinalities()
 
-    if rdbms_type == 'postgresql':
+    if rdbms_type == "postgresql":
         postgresql = PostgreSQL(
             host=rdbms.host,
             port=rdbms.port,
             db=rdbms.db,
             username=rdbms.username,
-            password=rdbms.password
+            password=rdbms.password,
         )
         postgresql.process_mapping_cardinalities(mongodb, collections, cardinalities)
         postgresql.process_collection(mongodb, collections)
 
-        schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
-
         success = postgresql.insert_data_by_relation(mongodb, cardinalities)
 
-    elif rdbms_type == 'mysql':
+    elif rdbms_type == "mysql":
         mysql = MySQL(
             host=rdbms.host,
             port=rdbms.port,
             db=rdbms.db,
             username=rdbms.username,
-            password=rdbms.password
+            password=rdbms.password,
         )
         mysql.process_mapping_cardinalities(mongodb, collections, cardinalities)
         mysql.process_collection(mongodb, collections)
-
-        schema = {k: v.to_dict() for k, v in mysql.relations.items()}
 
         success = mysql.insert_data_by_relation(mongodb, cardinalities)
 
     if success is True:
         return JSONResponse(
-            content=jsonable_encoder(success),
-            status_code=status.HTTP_201_CREATED
+            content=jsonable_encoder(success), status_code=status.HTTP_201_CREATED
         )
     else:
-        return Response(
-            status_code=status.HTTP_204_NO_CONTENT
-        )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)

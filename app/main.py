@@ -17,9 +17,9 @@ app.add_middleware(
 app.include_router(mongodb.router)
 app.include_router(rdbms.router)
 
+
 @app.get("/")
 def root():
     return JSONResponse(
-        content={"message": "GooseSeqlify API"},
-        status_code=status.HTTP_200_OK
+        content={"message": "GooseSeqlify API"}, status_code=status.HTTP_200_OK
     )

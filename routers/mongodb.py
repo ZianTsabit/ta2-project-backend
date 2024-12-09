@@ -4,18 +4,14 @@ from fastapi.responses import JSONResponse
 
 from models.mongodb.mongodb import MongoDB
 
-router = APIRouter(
-    prefix="/api/mongodb",
-    tags=["mongodb"]
-)
+router = APIRouter(prefix="/api/mongodb", tags=["mongodb"])
 
 
 @router.get("/")
 async def root_mongodb():
 
     return JSONResponse(
-        content={"message": "MongoDB Routers"},
-        status_code=status.HTTP_200_OK
+        content={"message": "MongoDB Routers"}, status_code=status.HTTP_200_OK
     )
 
 
@@ -26,20 +22,14 @@ async def test_connection(mongodb: MongoDB):
 
     if connection_status:
         return JSONResponse(
-            content={
-                "status": connection_status,
-                "message": "connection success"
-            },
-            status_code=status.HTTP_200_OK
+            content={"status": connection_status, "message": "connection success"},
+            status_code=status.HTTP_200_OK,
         )
 
     else:
         return JSONResponse(
-            content={
-                "status": connection_status,
-                "message": "connection failed"
-            },
-            status_code=status.HTTP_200_OK
+            content={"status": connection_status, "message": "connection failed"},
+            status_code=status.HTTP_200_OK,
         )
 
 
@@ -50,11 +40,8 @@ async def display_schema(mongodb: MongoDB):
 
     if schema:
         return JSONResponse(
-            content=jsonable_encoder(schema),
-            status_code=status.HTTP_200_OK
+            content=jsonable_encoder(schema), status_code=status.HTTP_200_OK
         )
 
     else:
-        return Response(
-            status_code=status.HTTP_204_NO_CONTENT
-        )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)

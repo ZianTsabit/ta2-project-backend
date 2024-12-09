@@ -3,5 +3,4 @@ exclude =
     */tests/*
     */ta2-venv/*
     */schemas/*
-    */models/*
 ignore = E501

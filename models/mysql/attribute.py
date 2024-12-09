@@ -14,5 +14,5 @@ class Attribute(BaseModel):
             "name": cls.name,
             "data_type": cls.data_type.value,
             "not_null": cls.not_null,
-            "unique": cls.unique
+            "unique": cls.unique,
         }
