@@ -12,9 +12,10 @@ class Relation(BaseModel):
     foreign_key: List[Attribute] = []
 
     def to_dict(cls):
+
         return {
             "name": cls.name,
             "attributes": [attr.to_dict() for attr in cls.attributes],
-            "primary_key": cls.primary_key.to_dict(),
+            "primary_key": cls.primary_key.to_dict() if cls.primary_key else None,
             "foreign_key": [attr.to_dict() for attr in cls.foreign_key],
         }

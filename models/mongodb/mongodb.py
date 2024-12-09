@@ -569,6 +569,14 @@ class MongoDB(BaseModel):
 
         return ""
 
+    def get_field(cls, field_name: str, src_coll: str) -> str:
+
+        fields = cls.collections[src_coll]
+
+        for f in fields:
+            if f.name == field_name:
+                return f
+
     def check_parent_field(cls, field_name: str) -> str:
 
         collections = list(cls.collections.keys())

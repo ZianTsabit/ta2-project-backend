@@ -148,7 +148,6 @@ class PostgreSQL(Rdbms):
                         source_rel.attributes.append(attr)
 
                     elif f.name == dest_coll and f.data_type == "object":
-
                         dest_rel.attributes.append(
                             Attribute(
                                 name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
@@ -227,7 +226,7 @@ class PostgreSQL(Rdbms):
                 if primary_key_dest is not None and dest_rel.primary_key is None:
 
                     primary_key_attr = Attribute(
-                        name=f"({primary_key_dest})",
+                        name=f"{primary_key_dest}",
                         data_type=PsqlType.NULL,
                         not_null=True,
                         unique=True,
@@ -244,6 +243,15 @@ class PostgreSQL(Rdbms):
                     )
                     source_rel.primary_key = primary_key_attr
                     source_rel.attributes.append(primary_key_attr)
+
+                elif len(primary_key_source.split(",")) > 1:
+                    primary_key_attr = Attribute(
+                        name=primary_key_source,
+                        data_type=PsqlType.NULL,
+                        not_null=False,
+                        unique=True,
+                    )
+                    source_rel.primary_key = primary_key_attr
 
                 for f in source:
 
@@ -313,9 +321,17 @@ class PostgreSQL(Rdbms):
 
                     primary_key_dest = mongo.get_primary_key(dest_coll)
 
-                    check_key_source = mongo.check_key_in_other_collection(
-                        source_rel.primary_key.name, source_coll
-                    )
+                    check_key_source = {
+                        "collection": None,
+                        "field": None,
+                        "status": False,
+                    }
+
+                    if len(primary_key_source.split(",")) == 0:
+
+                        check_key_source = mongo.check_key_in_other_collection(
+                            source_rel.primary_key.name, source_coll
+                        )
 
                     for f in dest:
 
@@ -363,7 +379,10 @@ class PostgreSQL(Rdbms):
                         dest_rel.primary_key = primary_key_attr
                         dest_rel.attributes.append(primary_key_attr)
 
-                    if len(dest_rel.foreign_key) < 1:
+                    if (
+                        len(dest_rel.foreign_key) < 1
+                        and len(primary_key_source.split(",")) == 0
+                    ):
 
                         foreign_key = Attribute(
                             name=f"{source_coll}.{source_coll}_{source_rel.primary_key.name}",
@@ -373,6 +392,39 @@ class PostgreSQL(Rdbms):
                         )
 
                         dest_rel.attributes.append(foreign_key)
+
+                        dest_rel.foreign_key.append(foreign_key)
+
+                    else:
+                        primary_keys = (
+                            primary_key_source.replace("(", "")
+                            .replace(")", "")
+                            .split(",")
+                        )
+
+                        frg_key = frg_key = ",".join(
+                            [f"{source_coll}_{key}" for key in primary_keys]
+                        )
+
+                        for key in primary_keys:
+
+                            field = mongo.get_field(key, source_coll)
+
+                            attr = Attribute(
+                                name=f"{source_coll}.{source_coll}_{key}",
+                                data_type=cls.data_type_mapping(field.data_type),
+                                not_null=field.not_null,
+                                unique=False,
+                            )
+
+                            dest_rel.attributes.append(attr)
+
+                        foreign_key = Attribute(
+                            name=f"{source_coll}.({frg_key})",
+                            data_type=cls.data_type_mapping(field.data_type),
+                            not_null=field.not_null,
+                            unique=False,
+                        )
 
                         dest_rel.foreign_key.append(foreign_key)
 
@@ -562,7 +614,7 @@ class PostgreSQL(Rdbms):
     def create_table_ddl(cls, table: dict):
 
         relations = cls.relations
-
+        print(relations)
         ddl = f'CREATE TABLE {table["name"]} (\n'
 
         columns = []
@@ -583,8 +635,17 @@ class PostgreSQL(Rdbms):
         ddl += ");"
 
         for fk in table.get("foreign_key", []):
-            ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].split(".")[1]}\n'
-            ddl += f'    FOREIGN KEY ({fk["name"].split(".")[1]}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
+
+            primary_key = relations[fk["name"].split(".")[0]].primary_key.name
+
+            if len(primary_key.split(",")) < 2:
+                ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].split(".")[1]}\n'
+                ddl += f'    FOREIGN KEY ({fk["name"].split(".")[1]}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
+            else:
+                coll = fk["name"].split(".")[0]
+                key = fk["name"].split(".")[1].replace(f"{coll}_", "")
+                ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{key.replace("(","").replace(")","").replace(",","_")}\n'
+                ddl += f'    FOREIGN KEY {fk["name"].split(".")[1]} REFERENCES {fk["name"].split(".")[0]}{key};'
 
         return ddl
 
