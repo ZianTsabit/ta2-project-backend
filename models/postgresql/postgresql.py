@@ -753,8 +753,7 @@ class PostgreSQL(Rdbms):
                     field = mongodb.get_field(relation.name, card.source)
                     if field:
                         cardinality_type = card.type
-            print(res)
-            print(cardinality_type)
+
             datas = mongodb.get_data_by_collection(res, cardinality_type)
 
             for data in datas:
