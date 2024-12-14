@@ -318,6 +318,30 @@ class PostgreSQL(Rdbms):
                             )
                         )
 
+                    elif (
+                        f.name == dest_coll
+                        and f.data_type.split(".")[0] == "array"
+                        and dest is not None
+                    ):
+                        print("test")
+                        dest_rel.attributes.append(
+                            Attribute(
+                                name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
+                                data_type=source_rel.primary_key.data_type,
+                                not_null=source_rel.primary_key.not_null,
+                                unique=False,
+                            )
+                        )
+
+                        dest_rel.foreign_key.append(
+                            Attribute(
+                                name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
+                                data_type=source_rel.primary_key.data_type,
+                                not_null=source_rel.primary_key.not_null,
+                                unique=False,
+                            )
+                        )
+
                 if dest is not None:
 
                     primary_key_dest = mongo.get_primary_key(dest_coll)
@@ -384,7 +408,6 @@ class PostgreSQL(Rdbms):
                         len(dest_rel.foreign_key) < 1
                         and len(primary_key_source.split(",")) == 0
                     ):
-
                         foreign_key = Attribute(
                             name=f"{source_coll}.{source_coll}_{source_rel.primary_key.name}",
                             data_type=source_rel.primary_key.data_type,
@@ -397,37 +420,60 @@ class PostgreSQL(Rdbms):
                         dest_rel.foreign_key.append(foreign_key)
 
                     else:
+
                         primary_keys = (
                             primary_key_source.replace("(", "")
                             .replace(")", "")
                             .split(",")
                         )
 
-                        frg_key = frg_key = ",".join(
-                            [f"{source_coll}_{key}" for key in primary_keys]
-                        )
+                        if len(primary_keys) > 1:
 
-                        for key in primary_keys:
+                            frg_key = frg_key = ",".join(
+                                [f"{source_coll}_{key}" for key in primary_keys]
+                            )
 
-                            field = mongo.get_field(key, source_coll)
+                            for key in primary_keys:
 
-                            attr = Attribute(
-                                name=f"{source_coll}.{source_coll}_{key}",
+                                field = mongo.get_field(key, source_coll)
+
+                                attr = Attribute(
+                                    name=f"{source_coll}.{source_coll}_{key}",
+                                    data_type=cls.data_type_mapping(field.data_type),
+                                    not_null=field.not_null,
+                                    unique=False,
+                                )
+
+                                dest_rel.attributes.append(attr)
+
+                            foreign_key = Attribute(
+                                name=f"{source_coll}.({frg_key})",
                                 data_type=cls.data_type_mapping(field.data_type),
                                 not_null=field.not_null,
                                 unique=False,
                             )
 
-                            dest_rel.attributes.append(attr)
+                            dest_rel.foreign_key.append(foreign_key)
 
-                        foreign_key = Attribute(
-                            name=f"{source_coll}.({frg_key})",
-                            data_type=cls.data_type_mapping(field.data_type),
-                            not_null=field.not_null,
-                            unique=False,
-                        )
+                        else:
 
-                        dest_rel.foreign_key.append(foreign_key)
+                            check_key = mongo.check_key_in_other_collection(
+                                primary_keys[0], source_coll
+                            )
+
+                            if (
+                                check_key["status"] is True
+                                and check_key["collection"] == dest_coll
+                            ):
+
+                                foreign_key = Attribute(
+                                    name=f"{source_coll}.{check_key['field']}",
+                                    data_type=PsqlType.NULL,
+                                    not_null=True,
+                                    unique=False,
+                                )
+
+                                dest_rel.foreign_key.append(foreign_key)
 
             elif cardinality_type == CardinalitiesType.MANY_TO_MANY:
 
@@ -604,9 +650,11 @@ class PostgreSQL(Rdbms):
 
         for table_name, table in schema.items():
             if not table["foreign_key"]:
-                ddl_statements.append(cls.create_table_ddl(table))
+                ddl_statements.append(cls.create_table_ddl(table)[0])
+                foreign_key_statements.append(cls.create_table_ddl(table)[1])
             else:
-                foreign_key_statements.append(cls.create_table_ddl(table))
+                ddl_statements.append(cls.create_table_ddl(table)[0])
+                foreign_key_statements.append(cls.create_table_ddl(table)[1])
 
         ddl_statements.extend(foreign_key_statements)
 
@@ -616,7 +664,7 @@ class PostgreSQL(Rdbms):
 
         relations = cls.relations
 
-        ddl = f'CREATE TABLE {table["name"]} (\n'
+        ddl_create_table = f'CREATE TABLE {table["name"]} (\n'
 
         columns = []
         for attr in table["attributes"]:
@@ -632,23 +680,25 @@ class PostgreSQL(Rdbms):
             pk_cols = primary_key["name"]
             columns.append(f"    PRIMARY KEY ({pk_cols})")
 
-        ddl += ",\n".join(columns) + "\n"
-        ddl += ");"
+        ddl_create_table += ",\n".join(columns) + "\n"
+        ddl_create_table += ");"
+
+        ddl_alter_table = ""
 
         for fk in table.get("foreign_key", []):
 
             primary_key = relations[fk["name"].split(".")[0]].primary_key.name
 
             if len(primary_key.split(",")) < 2:
-                ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].split(".")[1].replace("(","").replace(")","")}\n'
-                ddl += f'    FOREIGN KEY ({fk["name"].split(".")[1].replace("(","").replace(")","")}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
+                ddl_alter_table += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].split(".")[1].replace("(","").replace(")","")}\n'
+                ddl_alter_table += f'    FOREIGN KEY ({fk["name"].split(".")[1].replace("(","").replace(")","")}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
             else:
                 coll = fk["name"].split(".")[0]
                 key = fk["name"].split(".")[1].replace(f"{coll}_", "")
-                ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{key.replace("(","").replace(")","").replace(",","_")}\n'
-                ddl += f'    FOREIGN KEY {fk["name"].split(".")[1]} REFERENCES {fk["name"].split(".")[0]}{key};'
+                ddl_alter_table += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{key.replace("(","").replace(")","").replace(",","_")}\n'
+                ddl_alter_table += f'    FOREIGN KEY {fk["name"].split(".")[1]} REFERENCES {fk["name"].split(".")[0]}{key};'
 
-        return ddl
+        return ddl_create_table, ddl_alter_table
 
     def insert_data_by_relation(
         cls, mongodb: MongoDB, cardinalities: List[Cardinalities]
@@ -685,10 +735,6 @@ class PostgreSQL(Rdbms):
         def convert_to_timestamp(value):
             if isinstance(value, datetime):
                 return str(datetime.fromtimestamp(value.timestamp()))
-            try:
-                return datetime.strptime(value, "%Y-%m-%d %H:%M:%S.%f").timestamp()
-            except (ValueError, TypeError):
-                pass
             return value
 
         creation_order = get_table_creation_order()
@@ -708,7 +754,7 @@ class PostgreSQL(Rdbms):
                     field = mongodb.get_field(relation.name, card.source)
                     if field:
                         cardinality_type = card.type
-
+            print(res)
             datas = mongodb.get_data_by_collection(res, cardinality_type)
 
             for data in datas:

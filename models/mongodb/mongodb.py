@@ -158,7 +158,7 @@ class MongoDB(BaseModel):
                         {
                             "$unwind": {
                                 "path": f"${key}",
-                                "preserveNullAndEmptyArrays": True,
+                                "preserveNullAndEmptyArrays": False,
                             }
                         },
                         {"$project": {"_id": 0, f"{key}": 1}},
@@ -204,7 +204,7 @@ class MongoDB(BaseModel):
                         {
                             "$unwind": {
                                 "path": f"${key}",
-                                "preserveNullAndEmptyArrays": True,
+                                "preserveNullAndEmptyArrays": False,
                             }
                         },
                         {"$project": {"_id": 0, f"{key}": 1}},
