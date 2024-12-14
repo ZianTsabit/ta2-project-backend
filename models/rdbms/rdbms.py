@@ -31,10 +31,11 @@ class Rdbms(BaseModel):
         try:
             engine = cls.create_connection()
             with engine.connect() as connection:
-                queries = [q.strip() for q in query.split(';') if q.strip()]
-                for q in queries:
-                    print(f"Executing: {q};")
-                    connection.execute(text(f'{q}'))
+                with connection.begin():
+                    queries = [q.strip() for q in query.split(";") if q.strip()]
+                    for q in queries:
+                        print(f"Executing: {q};")
+                        connection.execute(text(f"{q}"))
             return True
         except OperationalError as e:
             print(e)

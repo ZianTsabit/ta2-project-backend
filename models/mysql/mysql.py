@@ -46,7 +46,7 @@ class MySQL(Rdbms):
                 if primary_key is None:
                     primary_key_attr = Attribute(
                         name="id",
-                        data_type=MySQLType.SERIAL,
+                        data_type=MySQLType.INTEGER,
                         not_null=True,
                         unique=True,
                     )
@@ -127,7 +127,7 @@ class MySQL(Rdbms):
 
                     primary_key_attr = Attribute(
                         name="id",
-                        data_type=MySQLType.SERIAL,
+                        data_type=MySQLType.INTEGER,
                         not_null=True,
                         unique=True,
                     )
@@ -179,7 +179,7 @@ class MySQL(Rdbms):
 
                     primary_key_attr = Attribute(
                         name="id",
-                        data_type=MySQLType.SERIAL,
+                        data_type=MySQLType.INTEGER,
                         not_null=True,
                         unique=True,
                     )
@@ -203,7 +203,7 @@ class MySQL(Rdbms):
                 if primary_key_source is None:
                     primary_key_attr = Attribute(
                         name="id",
-                        data_type=MySQLType.SERIAL,
+                        data_type=MySQLType.INTEGER,
                         not_null=True,
                         unique=True,
                     )
@@ -361,7 +361,7 @@ class MySQL(Rdbms):
 
                         primary_key_attr = Attribute(
                             name="id",
-                            data_type=MySQLType.SERIAL,
+                            data_type=MySQLType.INTEGER,
                             not_null=True,
                             unique=True,
                         )
@@ -450,7 +450,7 @@ class MySQL(Rdbms):
                     if primary_key_source is None:
                         primary_key_attr = Attribute(
                             name="id",
-                            data_type=MySQLType.SERIAL,
+                            data_type=MySQLType.INTEGER,
                             not_null=True,
                             unique=True,
                         )
@@ -483,7 +483,7 @@ class MySQL(Rdbms):
 
                         dest_primary_key_attr = Attribute(
                             name="id",
-                            data_type=MySQLType.SERIAL,
+                            data_type=MySQLType.INTEGER,
                             not_null=True,
                             unique=True,
                         )
@@ -509,7 +509,7 @@ class MySQL(Rdbms):
                     if primary_key_dest is None:
                         primary_key_attr = Attribute(
                             name="id",
-                            data_type=MySQLType.SERIAL,
+                            data_type=MySQLType.INTEGER,
                             not_null=True,
                             unique=True,
                         )
@@ -628,7 +628,7 @@ class MySQL(Rdbms):
 
         relations = cls.relations
 
-        ddl_create_table = f'CREATE TABLE {table["name"]} (\n'
+        ddl_create_table = f'CREATE TABLE `{table["name"]}` (\n'
 
         columns = []
         for attr in table["attributes"]:
@@ -654,13 +654,13 @@ class MySQL(Rdbms):
             primary_key = relations[fk["name"].split(".")[0]].primary_key.name
 
             if len(primary_key.split(",")) < 2:
-                ddl_alter_table += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].split(".")[1].replace("(","").replace(")","")}\n'
-                ddl_alter_table += f'    FOREIGN KEY ({fk["name"].split(".")[1].replace("(","").replace(")","")}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
+                ddl_alter_table += f'\nALTER TABLE `{table["name"]}` ADD CONSTRAINT fk_{table["name"]}_{fk["name"].split(".")[1].replace("(","").replace(")","")}\n'
+                ddl_alter_table += f'    FOREIGN KEY ({fk["name"].split(".")[1].replace("(","").replace(")","")}) REFERENCES `{fk["name"].split(".")[0]}`({relations[fk["name"].split(".")[0]].primary_key.name});'
             else:
                 coll = fk["name"].split(".")[0]
                 key = fk["name"].split(".")[1].replace(f"{coll}_", "")
-                ddl_alter_table += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{key.replace("(","").replace(")","").replace(",","_")}\n'
-                ddl_alter_table += f'    FOREIGN KEY {fk["name"].split(".")[1]} REFERENCES {fk["name"].split(".")[0]}{key};'
+                ddl_alter_table += f'\nALTER TABLE `{table["name"]}` ADD CONSTRAINT fk_{table["name"]}_{key.replace("(","").replace(")","").replace(",","_")}\n'
+                ddl_alter_table += f'    FOREIGN KEY {fk["name"].split(".")[1]} REFERENCES `{fk["name"].split(".")[0]}`{key};'
 
         return ddl_create_table, ddl_alter_table
 
@@ -741,9 +741,9 @@ class MySQL(Rdbms):
                 )
 
                 insert_query = (
-                    f"INSERT INTO {relation.name} ({columns}) VALUES ({values});"
+                    f"INSERT INTO `{relation.name}` ({columns}) VALUES ({values});"
                 )
-
+                print(insert_query)
                 cls.execute_query(insert_query)
 
         return True
