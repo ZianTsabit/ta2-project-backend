@@ -1294,6 +1294,61 @@ class MongoDB(BaseModel):
 
                 data = list(docs)
 
+            elif coll_2_parent_field[0] == coll_1 and coll_2 not in cls.collections:
+
+                project_query = {}
+                project_query["_id"] = 0
+                for i in fields:
+                    if i.split(".")[0] == coll_2:
+                        project_query[coll_2] = "$_id"
+
+                query = [
+                    {"$unwind": {"path": f"${coll_2}"}},
+                    {"$group": {"_id": f"${coll_2}"}},
+                    {"$sort": {"_id": 1}},
+                    {"$project": project_query},
+                ]
+
+                coll = db[coll_1]
+                docs = coll.aggregate(query)
+                datas = list(docs)
+                value_id = {}
+                for i in range(0, len(datas)):
+                    value_id[datas[i][coll_2]] = i + 1
+
+                project_query = {}
+                project_query["_id"] = 0
+                for i in fields:
+                    if i.split(".")[0] == coll_2_parent_field[0]:
+                        project_query[i.split(".")[-1]] = (
+                            f'${i.replace(f"{coll_2_parent_field[0]}.{coll_2_parent_field[0]}_","")}'
+                        )
+                    else:
+                        project_query[f'{i.split(".")[-1]}'] = f'${i.split(".")[0]}'
+
+                query = [
+                    {"$unwind": {"path": f"${coll_2}"}},
+                    {"$project": project_query},
+                ]
+
+                coll = db[coll_1]
+
+                docs = coll.aggregate(query)
+
+                datas = list(docs)
+
+                data = []
+
+                for d in datas:
+                    res = {}
+                    for f in fields:
+                        if f.split(".")[0] == coll_1:
+                            res[f.split(".")[-1]] = d[f.split(".")[-1]]
+                        else:
+                            res[f.split(".")[-1]] = value_id[d[f.split(".")[-1]]]
+
+                    data.append(res)
+
         else:
 
             if parent_coll != "":

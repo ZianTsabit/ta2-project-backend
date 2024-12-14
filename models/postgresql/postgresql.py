@@ -323,7 +323,6 @@ class PostgreSQL(Rdbms):
                         and f.data_type.split(".")[0] == "array"
                         and dest is not None
                     ):
-                        print("test")
                         dest_rel.attributes.append(
                             Attribute(
                                 name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
@@ -755,6 +754,7 @@ class PostgreSQL(Rdbms):
                     if field:
                         cardinality_type = card.type
             print(res)
+            print(cardinality_type)
             datas = mongodb.get_data_by_collection(res, cardinality_type)
 
             for data in datas:
