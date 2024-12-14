@@ -184,7 +184,12 @@ class MongoDB(BaseModel):
 
                 array_size_count = collection.aggregate(
                     [
-                        {"$project": {"_id": 0, "arraySize": {"$size": f"${key}"}}},
+                        {
+                            "$project": {
+                                "_id": 0,
+                                "arraySize": {"$size": {"$ifNull": [f"${key}", []]}},
+                            }
+                        },
                         {
                             "$group": {
                                 "_id": None,
@@ -576,6 +581,8 @@ class MongoDB(BaseModel):
         for f in fields:
             if f.name == field_name:
                 return f
+
+        return None
 
     def check_parent_field(cls, field_name: str) -> str:
 

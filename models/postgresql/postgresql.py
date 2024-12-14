@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Dict, List
 
 import psycopg2
@@ -614,7 +615,7 @@ class PostgreSQL(Rdbms):
     def create_table_ddl(cls, table: dict):
 
         relations = cls.relations
-        print(relations)
+
         ddl = f'CREATE TABLE {table["name"]} (\n'
 
         columns = []
@@ -639,8 +640,8 @@ class PostgreSQL(Rdbms):
             primary_key = relations[fk["name"].split(".")[0]].primary_key.name
 
             if len(primary_key.split(",")) < 2:
-                ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].split(".")[1]}\n'
-                ddl += f'    FOREIGN KEY ({fk["name"].split(".")[1]}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
+                ddl += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].split(".")[1].replace("(","").replace(")","")}\n'
+                ddl += f'    FOREIGN KEY ({fk["name"].split(".")[1].replace("(","").replace(")","")}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
             else:
                 coll = fk["name"].split(".")[0]
                 key = fk["name"].split(".")[1].replace(f"{coll}_", "")
@@ -681,6 +682,15 @@ class PostgreSQL(Rdbms):
 
             return creation_order[::-1]
 
+        def convert_to_timestamp(value):
+            if isinstance(value, datetime):
+                return str(datetime.fromtimestamp(value.timestamp()))
+            try:
+                return datetime.strptime(value, "%Y-%m-%d %H:%M:%S.%f").timestamp()
+            except (ValueError, TypeError):
+                pass
+            return value
+
         creation_order = get_table_creation_order()
 
         for i in creation_order:
@@ -695,14 +705,20 @@ class PostgreSQL(Rdbms):
             cardinality_type = None
             for card in cardinalities:
                 if card.destination == relation.name:
-                    cardinality_type = card.type
+                    field = mongodb.get_field(relation.name, card.source)
+                    if field:
+                        cardinality_type = card.type
 
             datas = mongodb.get_data_by_collection(res, cardinality_type)
 
             for data in datas:
 
                 transformed_data = {
-                    key: str(value) if isinstance(value, ObjectId) else value
+                    key: (
+                        str(value)
+                        if isinstance(value, ObjectId)
+                        else convert_to_timestamp(value)
+                    )
                     for key, value in data.items()
                 }
 
