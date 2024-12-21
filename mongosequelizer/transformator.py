@@ -39,14 +39,14 @@ class MongoSequelizer:
                 port=self.rdbms.port,
                 db=self.rdbms.db,
                 username=self.rdbms.username,
-                password=self.password,
+                password=self.rdbms.password,
             )
             mysql.process_mapping_cardinalities(
                 self.mongodb, collections, cardinalities
             )
             mysql.process_collection(self.mongodb, collections)
 
-            schema = {k: v.to_dict() for k, v in mysql.relations.items()}
+            schema = mysql.relations["object"]
 
             ddl = mysql.generate_ddl(schema)
 
@@ -92,9 +92,9 @@ class MongoSequelizer:
             )
             mysql.process_collection(self.mongodb, collections)
 
-            schema = postgresql.relations["object"]
+            schema = mysql.relations["object"]
 
-            ddl = postgresql.generate_ddl(schema)
+            ddl = mysql.generate_ddl(schema)
 
             if ddl != "":
                 success = mysql.execute_query(ddl)
