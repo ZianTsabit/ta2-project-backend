@@ -1,20 +1,27 @@
-from typing import List
+from typing import Dict, Optional
 
 from pydantic import BaseModel
 
 from mongosequelizer.mysql.attribute import Attribute
 
 
+class AttributeObject(BaseModel):
+    object: Dict[str, Attribute]
+
+    def to_dict(cls):
+        return {"object": cls.object}
+
+
 class Relation(BaseModel):
     name: str
-    attributes: List[Attribute] = []
-    primary_key: Attribute = None
-    foreign_key: List[Attribute] = []
+    attributes: Optional[AttributeObject] = None
+    primary_key: Optional[Attribute] = None
+    foreign_key: Optional[AttributeObject] = None
 
     def to_dict(cls):
         return {
             "name": cls.name,
-            "attributes": [attr.to_dict() for attr in cls.attributes],
+            "attributes": cls.attributes.to_dict(),
             "primary_key": cls.primary_key.to_dict(),
-            "foreign_key": [attr.to_dict() for attr in cls.foreign_key],
+            "foreign_key": cls.foreign_key.to_dict(),
         }
