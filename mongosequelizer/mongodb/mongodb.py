@@ -490,9 +490,12 @@ class MongoDB(BaseModel):
 
         return candidate_key
 
-    def check_key_in_other_collection(cls, src_key: str, src_coll: str) -> bool:
+    def check_key_in_other_collections(cls, src_key: str, src_coll: str) -> bool:
 
         res = {}
+
+        res["object"] = {}
+        res["status"] = False
 
         client = cls.create_client()
         db = client[cls.db]
@@ -517,17 +520,52 @@ class MongoDB(BaseModel):
                     if len(found) > 0:
                         if fuzz.ratio(field.name, src_coll + src_key) > 90:
 
-                            res["collection"] = c
-                            res["field"] = field.name
+                            res["object"][c] = {}
+                            res["object"][c]["collection"] = c
+                            res["object"][c]["field"] = field.name
                             res["status"] = True
 
-                            return res
+                            break
 
         client.close()
 
+        return res
+
+    def check_key_in_other_collection(
+        cls, src_key: str, src_coll: str, src_dest: str
+    ) -> bool:
+
+        res = {}
         res["collection"] = None
         res["field"] = None
         res["status"] = False
+
+        client = cls.create_client()
+        db = client[cls.db]
+
+        source_coll = db[src_coll]
+
+        fields = cls.collections[src_dest]
+        for field in fields:
+            pipeline = [{"$project": {f"{src_key}": 1}}]
+
+            values = list(source_coll.aggregate(pipeline))
+
+            for v in values:
+                target_coll = db[src_dest]
+                find = v[src_key]
+                found = list(target_coll.find({f"{field.name}": find}))
+
+                if len(found) > 0:
+                    if fuzz.ratio(field.name, src_coll + src_key) > 90:
+
+                        res["collection"] = src_dest
+                        res["field"] = field.name
+                        res["status"] = True
+
+                        return res
+
+        client.close()
 
         return res
 
@@ -623,7 +661,7 @@ class MongoDB(BaseModel):
             candidate_key = cls.get_candidate_key(coll_name)
 
             for f in candidate_key:
-                if cls.check_key_in_other_collection(f, coll_name)["status"] is True:
+                if cls.check_key_in_other_collections(f, coll_name)["status"] is True:
                     return f
 
                 elif cls.check_key_type(f, coll_name) == "oid":
@@ -979,64 +1017,68 @@ class MongoDB(BaseModel):
 
         primary_key = cls.get_primary_key(coll_name)
 
-        check_key = cls.check_key_in_other_collection(primary_key, coll_name)
+        check_keys = cls.check_key_in_other_collections(primary_key, coll_name)
 
-        if check_key["status"] is True:
+        keys = list(check_keys["object"].keys())
 
-            field = list(
-                filter(
-                    lambda x: x.name == check_key["field"],
-                    cls.collections[check_key["collection"]],
+        for key in keys:
+
+            if check_keys["status"] is True:
+
+                field = list(
+                    filter(
+                        lambda x: x.name == check_keys["object"][key]["field"],
+                        cls.collections[check_keys["object"][key]["collection"]],
+                    )
                 )
-            )
 
-            for f in field:
+                for f in field:
 
-                if f.unique is True:
+                    if f.unique is True:
 
-                    cardinality = Cardinalities(
-                        source=coll_name,
-                        destination=check_key["collection"],
-                        type=CardinalitiesType.ONE_TO_ONE,
-                    )
-
-                    if not any(
-                        (
-                            (
-                                d.source == cardinality.source
-                                and d.destination == cardinality.destination
-                            )
-                            or (
-                                d.source == cardinality.destination
-                                and d.destination == cardinality.source
-                            )
+                        cardinality = Cardinalities(
+                            source=coll_name,
+                            destination=check_keys["object"][key]["collection"],
+                            type=CardinalitiesType.ONE_TO_ONE,
                         )
-                        for d in res
-                    ):
-                        res.append(cardinality)
 
-                else:
-
-                    cardinality = Cardinalities(
-                        source=coll_name,
-                        destination=check_key["collection"],
-                        type=CardinalitiesType.ONE_TO_MANY,
-                    )
-
-                    if not any(
-                        (
+                        if not any(
                             (
-                                d.source == cardinality.source
-                                and d.destination == cardinality.destination
+                                (
+                                    d.source == cardinality.source
+                                    and d.destination == cardinality.destination
+                                )
+                                or (
+                                    d.source == cardinality.destination
+                                    and d.destination == cardinality.source
+                                )
                             )
-                            or (
-                                d.source == cardinality.destination
-                                and d.destination == cardinality.source
-                            )
+                            for d in res
+                        ):
+                            res.append(cardinality)
+
+                    else:
+
+                        cardinality = Cardinalities(
+                            source=coll_name,
+                            destination=check_keys["object"][key]["collection"],
+                            type=CardinalitiesType.ONE_TO_MANY,
                         )
-                        for d in res
-                    ):
-                        res.append(cardinality)
+
+                        if not any(
+                            (
+                                (
+                                    d.source == cardinality.source
+                                    and d.destination == cardinality.destination
+                                )
+                                or (
+                                    d.source == cardinality.destination
+                                    and d.destination == cardinality.source
+                                )
+                            )
+                            for d in res
+                        ):
+                            res.append(cardinality)
 
         return res
 

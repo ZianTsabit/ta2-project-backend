@@ -102,25 +102,25 @@ class MySQL(Rdbms):
 
                             source_rel.primary_key = attr
 
-                        source_rel.attributes.append(attr)
+                        source_rel.attributes.object[attr.name] = attr
 
                     elif f.name == dest_coll and f.data_type == "object":
-                        dest_rel.attributes.append(
-                            Attribute(
-                                name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
-                                data_type=source_rel.primary_key.data_type,
-                                not_null=source_rel.primary_key.not_null,
-                                unique=source_rel.primary_key.unique,
-                            )
+                        dest_rel.attributes.object[
+                            f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}"
+                        ] = Attribute(
+                            name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
+                            data_type=source_rel.primary_key.data_type,
+                            not_null=source_rel.primary_key.not_null,
+                            unique=source_rel.primary_key.unique,
                         )
 
-                        dest_rel.foreign_key.append(
-                            Attribute(
-                                name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
-                                data_type=source_rel.primary_key.data_type,
-                                not_null=source_rel.primary_key.not_null,
-                                unique=source_rel.primary_key.unique,
-                            )
+                        dest_rel.foreign_key.object[
+                            f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}"
+                        ] = Attribute(
+                            name=f"{source_rel.name}.{source_rel.name}_{source_rel.primary_key.name}",
+                            data_type=source_rel.primary_key.data_type,
+                            not_null=source_rel.primary_key.not_null,
+                            unique=source_rel.primary_key.unique,
                         )
 
                 if primary_key_source is None:
@@ -137,7 +137,7 @@ class MySQL(Rdbms):
                 primary_key_dest = mongo.get_primary_key(dest_coll)
 
                 check_key_source = mongo.check_key_in_other_collection(
-                    source_rel.primary_key.name, source_coll
+                    source_rel.primary_key.name, source_coll, dest_coll
                 )
 
                 for f in dest:
@@ -319,7 +319,7 @@ class MySQL(Rdbms):
                     if len(primary_key_source.split(",")) == 0:
 
                         check_key_source = mongo.check_key_in_other_collection(
-                            source_rel.primary_key.name, source_coll
+                            source_rel.primary_key.name, source_coll, dest_coll
                         )
 
                     for f in dest:
@@ -422,7 +422,7 @@ class MySQL(Rdbms):
                         else:
 
                             check_key = mongo.check_key_in_other_collection(
-                                primary_keys[0], source_coll
+                                primary_keys[0], source_coll, dest_coll
                             )
 
                             if (

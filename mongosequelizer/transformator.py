@@ -29,7 +29,7 @@ class MongoSequelizer:
             )
             postgresql.process_collection(self.mongodb, collections)
 
-            schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
+            schema = postgresql.relations["object"]
 
             ddl = postgresql.generate_ddl(schema)
 
@@ -72,7 +72,7 @@ class MongoSequelizer:
             )
             postgresql.process_collection(self.mongodb, collections)
 
-            schema = {k: v.to_dict() for k, v in postgresql.relations.items()}
+            schema = postgresql.relations["object"]
 
             ddl = postgresql.generate_ddl(schema)
 
@@ -92,9 +92,9 @@ class MongoSequelizer:
             )
             mysql.process_collection(self.mongodb, collections)
 
-            schema = {k: v.to_dict() for k, v in mysql.relations.items()}
+            schema = postgresql.relations["object"]
 
-            ddl = mysql.generate_ddl(schema)
+            ddl = postgresql.generate_ddl(schema)
 
             if ddl != "":
                 success = mysql.execute_query(ddl)
