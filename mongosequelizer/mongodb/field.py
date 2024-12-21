@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from models.type import MongoType
+from mongosequelizer.type import MongoType
 
 
 class Field(BaseModel):

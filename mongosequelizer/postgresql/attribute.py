@@ -1,11 +1,11 @@
 from pydantic import BaseModel
 
-from models.type import MySQLType
+from mongosequelizer.type import PsqlType
 
 
 class Attribute(BaseModel):
     name: str
-    data_type: MySQLType
+    data_type: PsqlType
     not_null: bool
     unique: bool
 

@@ -6,10 +6,10 @@ from pydantic import BaseModel
 from pymongo import MongoClient
 from pymongo_schema.extract import extract_pymongo_client_schema
 
-from models.mongodb.cardinalities import Cardinalities
-from models.mongodb.collection import Collection
-from models.mongodb.field import Field
-from models.type import CardinalitiesType, MongoType
+from mongosequelizer.mongodb.cardinalities import Cardinalities
+from mongosequelizer.mongodb.collection import Collection
+from mongosequelizer.mongodb.field import Field
+from mongosequelizer.type import CardinalitiesType, MongoType
 
 
 class MongoDB(BaseModel):

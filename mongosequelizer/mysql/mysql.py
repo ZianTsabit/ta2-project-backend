@@ -1,69 +1,22 @@
-import logging
 from datetime import datetime
 from typing import Dict, List
 
-import psycopg2
 from bson import ObjectId
-from psycopg2 import OperationalError
 
-from models.mongodb.cardinalities import Cardinalities
-from models.mongodb.mongodb import MongoDB
-from models.postgresql.attribute import Attribute
-from models.postgresql.relation import Relation
-from models.rdbms.rdbms import Rdbms
-from models.type import CardinalitiesType, MongoType, PsqlType
+from mongosequelizer.mongodb.cardinalities import Cardinalities
+from mongosequelizer.mongodb.mongodb import MongoDB
+from mongosequelizer.mysql.attribute import Attribute
+from mongosequelizer.mysql.relation import Relation
+from mongosequelizer.rdbms.rdbms import Rdbms
+from mongosequelizer.type import CardinalitiesType, MongoType, MySQLType
 
 
-class PostgreSQL(Rdbms):
-    engine: str = "postgresql"
+class MySQL(Rdbms):
+    engine: str = "mysql"
     relations: Dict = {}
 
     def create_engine_url(cls) -> str:
-
-        return f"postgresql+psycopg2://{cls.username}:{cls.password}@{cls.host}:{cls.port}/{cls.db}"
-
-    def create_connection(cls):
-        connection = psycopg2.connect(
-            host=cls.host,
-            port=cls.port,
-            database=cls.db,
-            user=cls.username,
-            password=cls.password,
-        )
-
-        return connection
-
-    def test_connection(cls) -> bool:
-        connection = None
-        try:
-            connection = cls.create_connection()
-            cursor = connection.cursor()
-            cursor.execute("SELECT 1")
-            cursor.close()
-            connection.close()
-            return True
-
-        except OperationalError as e:
-            print(e)
-            return False
-
-    def execute_query(cls, query: str) -> bool:
-        logging.info(query)
-        try:
-            conn = cls.create_connection()
-            with conn.cursor() as cursor:
-                queries = [q.strip() for q in query.split(";") if q.strip()]
-                for q in queries:
-                    print(f"Executing: {q};")
-                    cursor.execute(q)
-            conn.commit()
-            return True
-        except OperationalError as e:
-            print(f"OperationalError: {e}")
-            return False
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            return False
+        return f"mysql+pymysql://{cls.username}:{cls.password}@{cls.host}:{cls.port}/{cls.db}"
 
     def process_collection(cls, mongo: MongoDB, collections: dict):
 
@@ -92,7 +45,10 @@ class PostgreSQL(Rdbms):
 
                 if primary_key is None:
                     primary_key_attr = Attribute(
-                        name="id", data_type=PsqlType.SERIAL, not_null=True, unique=True
+                        name="id",
+                        data_type=MySQLType.INTEGER,
+                        not_null=True,
+                        unique=True,
                     )
                     new_rel.primary_key = primary_key_attr
                     new_rel.attributes.append(primary_key_attr)
@@ -170,7 +126,10 @@ class PostgreSQL(Rdbms):
                 if primary_key_source is None:
 
                     primary_key_attr = Attribute(
-                        name="id", data_type=PsqlType.SERIAL, not_null=True, unique=True
+                        name="id",
+                        data_type=MySQLType.INTEGER,
+                        not_null=True,
+                        unique=True,
                     )
                     source_rel.primary_key = primary_key_attr
                     source_rel.attributes.append(primary_key_attr)
@@ -219,7 +178,10 @@ class PostgreSQL(Rdbms):
                 if primary_key_dest is None:
 
                     primary_key_attr = Attribute(
-                        name="id", data_type=PsqlType.SERIAL, not_null=True, unique=True
+                        name="id",
+                        data_type=MySQLType.INTEGER,
+                        not_null=True,
+                        unique=True,
                     )
                     dest_rel.primary_key = primary_key_attr
                     dest_rel.attributes.append(primary_key_attr)
@@ -228,7 +190,7 @@ class PostgreSQL(Rdbms):
 
                     primary_key_attr = Attribute(
                         name=f"{primary_key_dest}",
-                        data_type=PsqlType.NULL,
+                        data_type=MySQLType.NULL,
                         not_null=True,
                         unique=True,
                     )
@@ -240,7 +202,10 @@ class PostgreSQL(Rdbms):
 
                 if primary_key_source is None:
                     primary_key_attr = Attribute(
-                        name="id", data_type=PsqlType.SERIAL, not_null=True, unique=True
+                        name="id",
+                        data_type=MySQLType.INTEGER,
+                        not_null=True,
+                        unique=True,
                     )
                     source_rel.primary_key = primary_key_attr
                     source_rel.attributes.append(primary_key_attr)
@@ -248,7 +213,7 @@ class PostgreSQL(Rdbms):
                 elif len(primary_key_source.split(",")) > 1:
                     primary_key_attr = Attribute(
                         name=primary_key_source,
-                        data_type=PsqlType.NULL,
+                        data_type=MySQLType.NULL,
                         not_null=False,
                         unique=True,
                     )
@@ -304,7 +269,7 @@ class PostgreSQL(Rdbms):
 
                         dest_rel.primary_key = Attribute(
                             name=f"{source_rel.name}_{source_rel.primary_key.name}, {dest_rel.name}_value",
-                            data_type=PsqlType.NULL,
+                            data_type=MySQLType.NULL,
                             not_null=True,
                             unique=True,
                         )
@@ -396,7 +361,7 @@ class PostgreSQL(Rdbms):
 
                         primary_key_attr = Attribute(
                             name="id",
-                            data_type=PsqlType.SERIAL,
+                            data_type=MySQLType.INTEGER,
                             not_null=True,
                             unique=True,
                         )
@@ -467,7 +432,7 @@ class PostgreSQL(Rdbms):
 
                                 foreign_key = Attribute(
                                     name=f"{source_coll}.{check_key['field']}",
-                                    data_type=PsqlType.NULL,
+                                    data_type=MySQLType.NULL,
                                     not_null=True,
                                     unique=False,
                                 )
@@ -485,7 +450,7 @@ class PostgreSQL(Rdbms):
                     if primary_key_source is None:
                         primary_key_attr = Attribute(
                             name="id",
-                            data_type=PsqlType.SERIAL,
+                            data_type=MySQLType.INTEGER,
                             not_null=True,
                             unique=True,
                         )
@@ -518,7 +483,7 @@ class PostgreSQL(Rdbms):
 
                         dest_primary_key_attr = Attribute(
                             name="id",
-                            data_type=PsqlType.SERIAL,
+                            data_type=MySQLType.INTEGER,
                             not_null=True,
                             unique=True,
                         )
@@ -544,7 +509,7 @@ class PostgreSQL(Rdbms):
                     if primary_key_dest is None:
                         primary_key_attr = Attribute(
                             name="id",
-                            data_type=PsqlType.SERIAL,
+                            data_type=MySQLType.INTEGER,
                             not_null=True,
                             unique=True,
                         )
@@ -592,7 +557,7 @@ class PostgreSQL(Rdbms):
 
                 new_relation.primary_key = Attribute(
                     name=f"{source_rel.name}_{source_rel.primary_key.name}, {dest_rel.name}_{dest_rel.primary_key.name}",
-                    data_type=PsqlType.NULL,
+                    data_type=MySQLType.NULL,
                     not_null=True,
                     unique=True,
                 )
@@ -622,19 +587,19 @@ class PostgreSQL(Rdbms):
 
         cls.relations = res
 
-    def data_type_mapping(cls, mongo_type: MongoType) -> PsqlType:
+    def data_type_mapping(cls, mongo_type: MongoType) -> MySQLType:
 
         mapping = {
-            MongoType.NULL: PsqlType.NULL,
-            MongoType.BOOL: PsqlType.BOOL,
-            MongoType.INTEGER: PsqlType.INTEGER,
-            MongoType.BIG_INT: PsqlType.BIG_INT,
-            MongoType.FLOAT: PsqlType.FLOAT,
-            MongoType.NUM: PsqlType.NUM,
-            MongoType.DATE: PsqlType.DATE,
-            MongoType.STRING: PsqlType.STRING,
-            MongoType.OID: PsqlType.OID,
-            MongoType.DB_REF: PsqlType.DB_REF,
+            MongoType.NULL: MySQLType.NULL,
+            MongoType.BOOL: MySQLType.BOOL,
+            MongoType.INTEGER: MySQLType.INTEGER,
+            MongoType.BIG_INT: MySQLType.BIG_INT,
+            MongoType.FLOAT: MySQLType.FLOAT,
+            MongoType.NUM: MySQLType.NUM,
+            MongoType.DATE: MySQLType.DATE,
+            MongoType.STRING: MySQLType.STRING,
+            MongoType.OID: MySQLType.OID,
+            MongoType.DB_REF: MySQLType.DB_REF,
         }
 
         if mongo_type in mapping:
@@ -663,7 +628,7 @@ class PostgreSQL(Rdbms):
 
         relations = cls.relations
 
-        ddl_create_table = f'CREATE TABLE {table["name"]} (\n'
+        ddl_create_table = f'CREATE TABLE `{table["name"]}` (\n'
 
         columns = []
         for attr in table["attributes"]:
@@ -689,13 +654,13 @@ class PostgreSQL(Rdbms):
             primary_key = relations[fk["name"].split(".")[0]].primary_key.name
 
             if len(primary_key.split(",")) < 2:
-                ddl_alter_table += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{fk["name"].split(".")[1].replace("(","").replace(")","")}\n'
-                ddl_alter_table += f'    FOREIGN KEY ({fk["name"].split(".")[1].replace("(","").replace(")","")}) REFERENCES {fk["name"].split(".")[0]}({relations[fk["name"].split(".")[0]].primary_key.name});'
+                ddl_alter_table += f'\nALTER TABLE `{table["name"]}` ADD CONSTRAINT fk_{table["name"]}_{fk["name"].split(".")[1].replace("(","").replace(")","")}\n'
+                ddl_alter_table += f'    FOREIGN KEY ({fk["name"].split(".")[1].replace("(","").replace(")","")}) REFERENCES `{fk["name"].split(".")[0]}`({relations[fk["name"].split(".")[0]].primary_key.name});'
             else:
                 coll = fk["name"].split(".")[0]
                 key = fk["name"].split(".")[1].replace(f"{coll}_", "")
-                ddl_alter_table += f'\nALTER TABLE {table["name"]} ADD CONSTRAINT fk_{table["name"]}_{key.replace("(","").replace(")","").replace(",","_")}\n'
-                ddl_alter_table += f'    FOREIGN KEY {fk["name"].split(".")[1]} REFERENCES {fk["name"].split(".")[0]}{key};'
+                ddl_alter_table += f'\nALTER TABLE `{table["name"]}` ADD CONSTRAINT fk_{table["name"]}_{key.replace("(","").replace(")","").replace(",","_")}\n'
+                ddl_alter_table += f'    FOREIGN KEY {fk["name"].split(".")[1]} REFERENCES `{fk["name"].split(".")[0]}`{key};'
 
         return ddl_create_table, ddl_alter_table
 
@@ -776,9 +741,9 @@ class PostgreSQL(Rdbms):
                 )
 
                 insert_query = (
-                    f"INSERT INTO {relation.name} ({columns}) VALUES ({values});"
+                    f"INSERT INTO `{relation.name}` ({columns}) VALUES ({values});"
                 )
-
+                print(insert_query)
                 cls.execute_query(insert_query)
 
         return True

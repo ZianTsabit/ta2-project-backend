@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from models.type import CardinalitiesType
+from mongosequelizer.type import CardinalitiesType
 
 
 class Cardinalities(BaseModel):
